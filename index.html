@@ -122,6 +122,11 @@
     line-height: 1.1;
   }
 
+  .stat-value .of {
+    color: rgba(127,127,127,0.5);
+    font-weight: 600;
+  }
+
   .stat-label {
     color: var(--muted);
     font-size: 0.85rem;
@@ -307,7 +312,7 @@
 
   <footer>
     <!-- <span id="ts"></span> -->
-    <a href="seats.json">Raw JSON</a>
+    <p><a href="https://paulofierro.com" target="_blank">Made by Paulo Fierro</a></p>
   </footer>
 </div>
 
@@ -315,12 +320,16 @@
 (async () => {
   const weeksEl = document.getElementById('weeks');
 
-  let data, lastModified;
+  let data, lastModified, history = { snapshots: [] };
   try {
     const resp = await fetch('seats.json', { cache: 'no-store' });
     if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
     data = await resp.json();
     lastModified = resp.headers.get('Last-Modified');
+    try {
+      const hresp = await fetch('history.json', { cache: 'no-store' });
+      if (hresp.ok) history = await hresp.json();
+    } catch (_) { /* history is optional */ }
   } catch (e) {
     document.getElementById('title').textContent = 'Cannot load data';
     document.getElementById('subtitle').textContent = '';
@@ -351,6 +360,34 @@
   const totalCap = totalLeft + totalSold;
   const pctSold = totalCap ? Math.round((totalSold / totalCap) * 100) : 0;
 
+  // Velocity: sold in the last N ms, computed against history.json snapshots.
+  // Compare only show IDs present in both snapshots so newly-added shows
+  // don't inflate the delta. If no snapshot is old enough, fall back to the
+  // oldest one so we can still show *some* number until enough history exists.
+  const currentSold = Object.fromEntries(
+    data.shows.map(s => [String(s.id), s.seats_sold ?? 0])
+  );
+  function velocity(targetMs) {
+    if (!history.snapshots || !history.snapshots.length) return null;
+    const now = Date.now();
+    const cutoff = now - targetMs;
+    let baseline = null;
+    for (const snap of history.snapshots) {
+      const ts = Date.parse(snap.t);
+      if (Number.isNaN(ts)) continue;
+      if (ts <= cutoff) baseline = snap;
+      else { if (!baseline) baseline = snap; break; }
+    }
+    if (!baseline) return null;
+    let delta = 0;
+    for (const [id, prev] of Object.entries(baseline.sold)) {
+      if (id in currentSold) delta += currentSold[id] - prev;
+    }
+    return { delta, ageMs: now - Date.parse(baseline.t) };
+  }
+  const v24h = velocity(24 * 60 * 60 * 1000);
+  const v7d  = velocity(7 * 24 * 60 * 60 * 1000);
+
   const dates = data.shows.map(s => parseShowDate(s.date)).filter(Boolean);
   const range = dates.length
     ? `${fmtShort(dates[0])} – ${fmtShort(dates[dates.length - 1])}, ${dates[0].getFullYear()}`
@@ -360,9 +397,11 @@
   document.getElementById('subtitle').textContent = `Prospect Playhouse • ${range} • ${data.shows.length} performances`;
   document.title = `${data.event.title || 'Show'} — Tickets`;
 
+  const fmtDelta = n => n === null ? '—' : (n > 0 ? '+' : '') + fmtNum(n);
+
   document.getElementById('stats').innerHTML = `
     <div class="stat">
-      <div class="stat-value">${fmtNum(totalLeft)}</div>
+      <div class="stat-value">${fmtNum(totalLeft)} <span class="of">/ ${fmtNum(totalCap)}</span></div>
       <div class="stat-label">Seats remaining</div>
     </div>
     <div class="stat">
@@ -374,8 +413,12 @@
       <div class="stat-label">Capacity sold</div>
     </div>
     <div class="stat">
-      <div class="stat-value">${fmtNum(totalCap)}</div>
-      <div class="stat-label">Total capacity</div>
+      <div class="stat-value">${v24h ? fmtDelta(v24h.delta) : '—'}</div>
+      <div class="stat-label">Sold in last 24h</div>
+    </div>
+    <div class="stat">
+      <div class="stat-value">${v7d ? fmtDelta(v7d.delta) : '—'}</div>
+      <div class="stat-label">Sold in last 7 days</div>
     </div>
   `;
 
