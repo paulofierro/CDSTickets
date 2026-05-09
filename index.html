@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ticket Availability</title>
+<style>
+  :root {
+    --bg: #f6f6f7;
+    --surface: #ffffff;
+    --border: #e7e7ea;
+    --border-strong: #d4d4d8;
+    --text: #18181b;
+    --muted: #6b7280;
+    --accent: #d2293d;
+    --good: #16a34a;
+    --warn: #ea580c;
+    --bad: #dc2626;
+    --good-soft: #dcfce7;
+    --warn-soft: #ffedd5;
+    --bad-soft: #fee2e2;
+    --good-text: #166534;
+    --warn-text: #9a3412;
+    --bad-text: #991b1b;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0b0b0c;
+      --surface: #161618;
+      --border: #26262a;
+      --border-strong: #3a3a40;
+      --text: #f4f4f5;
+      --muted: #9ca3af;
+      --good-soft: #052e16;
+      --warn-soft: #2a1606;
+      --bad-soft: #2a0a0a;
+      --good-text: #86efac;
+      --warn-text: #fdba74;
+      --bad-text: #fca5a5;
+    }
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .container {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 2.5rem 1.5rem 4rem;
+  }
+
+  header { margin-bottom: 2.5rem; }
+
+  .eyebrow {
+    color: var(--accent);
+    font-size: 0.8rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin: 0 0 0.5rem;
+  }
+
+  h1 {
+    font-size: clamp(2rem, 5vw, 3rem);
+    margin: 0 0 0.5rem;
+    letter-spacing: -0.025em;
+    font-weight: 700;
+  }
+
+  .subtitle {
+    color: var(--muted);
+    font-size: 1rem;
+    margin: 0;
+  }
+
+  .header-actions {
+    margin-top: 1.25rem;
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.55rem 1rem;
+    background: var(--accent);
+    color: #fff;
+    border-radius: 8px;
+    text-decoration: none;
+    font-size: 0.9rem;
+    font-weight: 600;
+    transition: opacity 0.15s, transform 0.15s;
+  }
+  .btn:hover { opacity: 0.9; transform: translateY(-1px); }
+
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 0.75rem;
+    margin-top: 1.75rem;
+  }
+
+  .stat {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1rem 1.25rem;
+  }
+
+  .stat-value {
+    font-size: 1.75rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+  }
+
+  .stat-label {
+    color: var(--muted);
+    font-size: 0.85rem;
+    margin-top: 0.25rem;
+  }
+
+  .weeks {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+  }
+
+  .week-label {
+    color: var(--muted);
+    font-size: 0.78rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin: 0 0 0.75rem;
+  }
+
+  .week-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1rem;
+  }
+
+  @media (max-width: 900px) {
+    .week-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+
+  @media (max-width: 520px) {
+    .week-grid { grid-template-columns: 1fr; }
+  }
+
+  .show {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+    transition: border-color 0.15s, transform 0.15s, box-shadow 0.15s;
+  }
+
+  .show:hover {
+    border-color: var(--border-strong);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.04);
+  }
+
+  .show-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+
+  .show-day {
+    color: var(--muted);
+    font-size: 0.85rem;
+    font-weight: 500;
+  }
+
+  .show-date {
+    font-weight: 700;
+    font-size: 1.1rem;
+    letter-spacing: -0.01em;
+    margin-top: 0.1rem;
+  }
+
+  .show-time {
+    color: var(--muted);
+    font-size: 0.9rem;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .availability {
+    display: flex;
+    align-items: baseline;
+    gap: 0.4rem;
+  }
+
+  .seats-left {
+    font-size: 2.25rem;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+  }
+
+  .seats-label {
+    color: var(--muted);
+    font-size: 0.875rem;
+  }
+
+  .bar {
+    background: rgba(127,127,127,0.15);
+    height: 6px;
+    border-radius: 3px;
+    overflow: hidden;
+  }
+
+  .bar-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.4s ease;
+  }
+
+  .bar-fill.good { background: var(--good); }
+  .bar-fill.warn { background: var(--warn); }
+  .bar-fill.bad  { background: var(--bad); }
+
+  .meta {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.82rem;
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .badge {
+    display: inline-block;
+    padding: 0.22rem 0.6rem;
+    border-radius: 999px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    white-space: nowrap;
+  }
+  .badge.good { background: var(--good-soft); color: var(--good-text); }
+  .badge.warn { background: var(--warn-soft); color: var(--warn-text); }
+  .badge.bad  { background: var(--bad-soft);  color: var(--bad-text); }
+
+  .error {
+    background: var(--bad-soft);
+    color: var(--bad-text);
+    padding: 1.25rem;
+    border-radius: 12px;
+    font-size: 0.92rem;
+    border: 1px solid var(--bad);
+  }
+  .error code {
+    background: rgba(0,0,0,0.08);
+    padding: 0.1rem 0.4rem;
+    border-radius: 4px;
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 0.85em;
+  }
+
+  footer {
+    margin-top: 3rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border);
+    color: var(--muted);
+    font-size: 0.85rem;
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  footer a { color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <p class="eyebrow">Cayman Drama Society</p>
+    <h1 id="title">Loading…</h1>
+    <p class="subtitle" id="subtitle"></p>
+    <span id="ts" class="subtitle" ></span>
+    <div class="header-actions">
+      <a class="btn" href="https://ticket.cds.ky/event?category=2" target="_blank" rel="noopener">Book tickets →</a>
+    </div>
+    <div class="stats" id="stats"></div>
+  </header>
+
+  <main>
+    <div class="weeks" id="weeks"></div>
+  </main>
+
+  <footer>
+    <!-- <span id="ts"></span> -->
+    <a href="seats.json">Raw JSON</a>
+  </footer>
+</div>
+
+<script>
+(async () => {
+  const weeksEl = document.getElementById('weeks');
+
+  let data, lastModified;
+  try {
+    const resp = await fetch('seats.json', { cache: 'no-store' });
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    data = await resp.json();
+    lastModified = resp.headers.get('Last-Modified');
+  } catch (e) {
+    document.getElementById('title').textContent = 'Cannot load data';
+    document.getElementById('subtitle').textContent = '';
+    weeksEl.innerHTML = `<div class="error">
+      Couldn't load <code>seats.json</code>: ${e.message}.<br><br>
+      Browsers block <code>fetch()</code> on <code>file://</code>.
+      Serve this folder over HTTP — e.g. run <code>python3 -m http.server</code>
+      in this directory, then open <code>http://localhost:8000/</code>.
+    </div>`;
+    return;
+  }
+
+  const monthMap = {Jan:0,Feb:1,Mar:2,Apr:3,May:4,Jun:5,Jul:6,Aug:7,Sep:8,Oct:9,Nov:10,Dec:11};
+  const dayNames = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+
+  function parseShowDate(s) {
+    const m = s.match(/(\d+)\s+(\w+),?\s+(\d+)/);
+    if (!m) return null;
+    return new Date(+m[3], monthMap[m[2]], +m[1]);
+  }
+
+  const fmtShort = d => d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+  const fmtNum = n => n.toLocaleString('en-US');
+
+  // Aggregates
+  const totalLeft = data.shows.reduce((s, x) => s + (x.seats_left ?? 0), 0);
+  const totalSold = data.shows.reduce((s, x) => s + (x.seats_sold ?? 0), 0);
+  const totalCap = totalLeft + totalSold;
+  const pctSold = totalCap ? Math.round((totalSold / totalCap) * 100) : 0;
+
+  const dates = data.shows.map(s => parseShowDate(s.date)).filter(Boolean);
+  const range = dates.length
+    ? `${fmtShort(dates[0])} – ${fmtShort(dates[dates.length - 1])}, ${dates[0].getFullYear()}`
+    : '';
+
+  document.getElementById('title').textContent = data.event.title || 'Show';
+  document.getElementById('subtitle').textContent = `Prospect Playhouse • ${range} • ${data.shows.length} performances`;
+  document.title = `${data.event.title || 'Show'} — Tickets`;
+
+  document.getElementById('stats').innerHTML = `
+    <div class="stat">
+      <div class="stat-value">${fmtNum(totalLeft)}</div>
+      <div class="stat-label">Seats remaining</div>
+    </div>
+    <div class="stat">
+      <div class="stat-value">${fmtNum(totalSold)}</div>
+      <div class="stat-label">Tickets sold</div>
+    </div>
+    <div class="stat">
+      <div class="stat-value">${pctSold}%</div>
+      <div class="stat-label">Capacity sold</div>
+    </div>
+    <div class="stat">
+      <div class="stat-value">${fmtNum(totalCap)}</div>
+      <div class="stat-label">Total capacity</div>
+    </div>
+  `;
+
+  function classify(pct) {
+    if (pct == 100) return { cls: 'bad',   label: 'Sold out!' };
+    if (pct >= 75)  return { cls: 'warn',  label: 'Filling up' };
+    return { cls: 'good', label: 'Available' };
+  }
+
+  function renderCard(show, date) {
+    const day = date ? dayNames[date.getDay()] : '';
+    const dateLabel = date ? fmtShort(date) : show.date;
+    const left = show.seats_left ?? 0;
+    const sold = show.seats_sold ?? 0;
+    const cap = left + sold;
+    const pct = cap ? Math.round((sold / cap) * 100) : 0;
+    const { cls, label } = classify(pct);
+
+    return `
+      <article class="show">
+        <div class="show-header">
+          <div>
+            <div class="show-day">${day}</div>
+            <div class="show-date">${dateLabel}</div>
+          </div>
+          <span class="badge ${cls}">${label}</span>
+        </div>
+        <div class="show-time">${show.time || ''}</div>
+        <div class="availability">
+          <span class="seats-left">${fmtNum(left)}</span>
+          <span class="seats-label">seats left</span>
+        </div>
+        <div class="bar"><div class="bar-fill ${cls}" style="width:${pct}%"></div></div>
+        <div class="meta">
+          <span>${fmtNum(sold)} sold</span>
+          <span>${pct}% full</span>
+        </div>
+      </article>
+    `;
+  }
+
+  // Group shows by Monday-of-the-week
+  function weekKey(d) {
+    const x = new Date(d);
+    const day = x.getDay();
+    const diff = day === 0 ? -6 : 1 - day;
+    x.setDate(x.getDate() + diff);
+    return x.toISOString().slice(0, 10);
+  }
+
+  const groups = new Map();
+  for (const show of data.shows) {
+    const date = parseShowDate(show.date);
+    const key = date ? weekKey(date) : 'unknown';
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push({ show, date });
+  }
+  const weeksSorted = [...groups.entries()].sort((a, b) => a[0].localeCompare(b[0]));
+
+  weeksEl.innerHTML = weeksSorted.map(([_, items], i) => {
+    const ds = items.map(x => x.date).filter(Boolean);
+    const range = ds.length ? `${fmtShort(ds[0])} – ${fmtShort(ds[ds.length - 1])}` : '';
+    const cards = items.map(({ show, date }) => renderCard(show, date)).join('');
+    return `
+      <section class="week">
+        <h2 class="week-label">Week ${i + 1} · ${range}</h2>
+        <div class="week-grid">${cards}</div>
+      </section>
+    `;
+  }).join('');
+
+  if (lastModified) {
+    const d = new Date(lastModified);
+    const parts = Object.fromEntries(
+      new Intl.DateTimeFormat('en-US', {
+        month: 'long', day: 'numeric', year: 'numeric',
+        hour: '2-digit', minute: '2-digit', hour12: false,
+        timeZone: 'America/Cayman',
+      }).formatToParts(d).map(p => [p.type, p.value])
+    );
+    const absolute = `${parts.month} ${parts.day}, ${parts.year} ${parts.hour}:${parts.minute} GMT-5`;
+    const rtf = new Intl.RelativeTimeFormat('en', { numeric: 'always' });
+    const relative = (() => {
+      const sec = Math.round((Date.now() - d.getTime()) / 1000);
+      if (sec < 10) return 'just now';
+      if (sec < 60) return rtf.format(-sec, 'second');
+      const min = Math.round(sec / 60);
+      if (min < 60) return rtf.format(-min, 'minute');
+      const hr = Math.round(min / 60);
+      if (hr < 24) return rtf.format(-hr, 'hour');
+      const day = Math.round(hr / 24);
+      if (day < 30) return rtf.format(-day, 'day');
+      const mon = Math.round(day / 30);
+      if (mon < 12) return rtf.format(-mon, 'month');
+      return rtf.format(-Math.round(mon / 12), 'year');
+    })();
+    document.getElementById('ts').textContent = `Last updated: ${relative}`;
+    document.getElementById('ts').title = `${absolute}`;
+  }
+})();
+</script>
+</body>
+</html>
