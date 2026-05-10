@@ -3,7 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Ticket Availability</title>
+<title>CDS Tickets</title>
+<link rel="icon" type="image/png" href="icons/favicon-96x96.png" sizes="96x96">
+<link rel="icon" type="image/svg+xml" href="icons/favicon.svg">
+<link rel="shortcut icon" href="icons/favicon.ico">
+<link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png">
 <style>
   :root {
     --bg: #f6f6f7;
@@ -286,11 +290,19 @@
     color: var(--muted);
     font-size: 0.85rem;
     display: flex;
-    justify-content: space-between;
+    justify-content: center;
     flex-wrap: wrap;
     gap: 0.5rem;
   }
   footer a { color: var(--muted); }
+  footer .logo {
+    display: inline-block;
+    width: 100px;
+    height: 75px;
+    background-color: rgba(127,127,127,0.35);
+    -webkit-mask: url(icons/jadehopper.svg) no-repeat center / contain;
+            mask: url(icons/jadehopper.svg) no-repeat center / contain;
+  }
 </style>
 </head>
 <body>
@@ -312,7 +324,7 @@
 
   <footer>
     <!-- <span id="ts"></span> -->
-    <p><a href="https://paulofierro.com" target="_blank">Made by Paulo Fierro</a></p>
+    <p><a href="https://jadehopper.com" target="_blank"><span class="logo" role="img"></span></a></p>
   </footer>
 </div>
 
