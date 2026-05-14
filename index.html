@@ -109,7 +109,15 @@
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
     gap: 0.75rem;
-    margin-top: 1.75rem;
+  }
+
+  .stats-label {
+    color: var(--muted);
+    font-size: 0.78rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin: 1.75rem 0 0.75rem;
   }
 
   .stat {
@@ -136,6 +144,39 @@
     font-size: 0.85rem;
     margin-top: 0.25rem;
   }
+
+  .chart-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 1.25rem 1.25rem 0.75rem;
+    margin-bottom: 2rem;
+  }
+  .chart-card h2 {
+    margin: 0 0 0.75rem;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--muted);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .chart { width: 100%; height: auto; display: block; overflow: visible; }
+  .chart .line {
+    stroke: var(--accent);
+    stroke-width: 2;
+    stroke-linejoin: round;
+    stroke-linecap: round;
+    fill: none;
+  }
+  .chart .area { fill: var(--accent); opacity: 0.08; }
+  .chart .dot { fill: var(--accent); }
+  .chart .grid { stroke: var(--border); stroke-width: 1; }
+  .chart text {
+    fill: var(--muted);
+    font-variant-numeric: tabular-nums;
+  }
+  .chart .ylabel { text-anchor: end; }
+  .chart .xlabel { text-anchor: middle; }
 
   .weeks {
     display: flex;
@@ -167,20 +208,60 @@
   }
 
   .show {
+    perspective: 1200px;
+    cursor: pointer;
+    transition: transform 0.15s;
+  }
+  .show:focus { outline: none; }
+  .show:focus-visible .card-front,
+  .show:focus-visible .card-back {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent);
+  }
+  .show:hover { transform: translateY(-2px); }
+
+  .card-inner {
+    position: relative;
+    display: grid;
+    transition: transform 0.55s cubic-bezier(0.4, 0.0, 0.2, 1);
+    transform-style: preserve-3d;
+  }
+  .show.flipped .card-inner { transform: rotateY(180deg); }
+
+  .card-front, .card-back {
+    grid-area: 1 / 1;
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: 14px;
     padding: 1.25rem;
+    transition: border-color 0.15s, box-shadow 0.15s;
+    -webkit-backface-visibility: hidden;
+            backface-visibility: hidden;
+  }
+  .show:hover .card-front,
+  .show:hover .card-back {
+    border-color: var(--border-strong);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.04);
+  }
+  .card-front {
     display: flex;
     flex-direction: column;
     gap: 0.85rem;
-    transition: border-color 0.15s, transform 0.15s, box-shadow 0.15s;
   }
-
-  .show:hover {
-    border-color: var(--border-strong);
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.04);
+  .card-back {
+    transform: rotateY(180deg);
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+  }
+  .back-chart { flex: 1; display: flex; align-items: center; min-height: 0; }
+  .back-chart > svg { width: 100%; }
+  .back-empty {
+    color: var(--muted);
+    font-size: 0.85rem;
+    text-align: center;
+    padding: 1rem 0;
+    width: 100%;
   }
 
   .show-header {
@@ -315,10 +396,15 @@
     <div class="header-actions">
       <a class="btn" href="https://ticket.cds.ky/event?category=2" target="_blank" rel="noopener">Book tickets →</a>
     </div>
+    <h2 class="stats-label" id="stats-label">Sales Stats</h2>
     <div class="stats" id="stats"></div>
   </header>
 
   <main>
+    <section id="chart-section" class="chart-card" hidden>
+      <h2>Tickets sold per day</h2>
+      <div id="chart"></div>
+    </section>
     <div class="weeks" id="weeks"></div>
   </main>
 
@@ -411,6 +497,17 @@
 
   const fmtDelta = n => n === null ? '—' : (n > 0 ? '+' : '') + fmtNum(n);
 
+  const firstSnapTs = history.snapshots
+    ?.map(s => Date.parse(s.t))
+    .filter(n => !Number.isNaN(n))
+    .sort((a, b) => a - b)[0];
+  if (firstSnapTs) {
+    const firstLabel = new Date(firstSnapTs).toLocaleDateString('en-US', {
+      month: 'short', day: 'numeric', timeZone: 'America/Cayman',
+    });
+    document.getElementById('stats-label').textContent = `Sales Stats (${firstLabel} – today)`;
+  }
+
   document.getElementById('stats').innerHTML = `
     <div class="stat">
       <div class="stat-value">${fmtNum(totalLeft)} <span class="of">/ ${fmtNum(totalCap)}</span></div>
@@ -450,26 +547,181 @@
     const { cls, label } = classify(pct);
 
     return `
-      <article class="show">
-        <div class="show-header">
-          <div>
-            <div class="show-day">${day}</div>
-            <div class="show-date">${dateLabel}</div>
+      <article class="show" data-show-id="${show.id}" tabindex="0" role="button" aria-pressed="false" aria-label="${day} ${dateLabel} — show daily sales">
+        <div class="card-inner">
+          <div class="card-front">
+            <div class="show-header">
+              <div>
+                <div class="show-day">${day}</div>
+                <div class="show-date">${dateLabel}</div>
+              </div>
+              <span class="badge ${cls}">${label}</span>
+            </div>
+            <div class="show-time">${show.time || ''}</div>
+            <div class="availability">
+              <span class="seats-left">${fmtNum(left)}</span>
+              <span class="seats-label">seats left</span>
+            </div>
+            <div class="bar"><div class="bar-fill ${cls}" style="width:${pct}%"></div></div>
+            <div class="meta">
+              <span>${fmtNum(sold)} sold</span>
+              <span>${pct}% full</span>
+            </div>
           </div>
-          <span class="badge ${cls}">${label}</span>
-        </div>
-        <div class="show-time">${show.time || ''}</div>
-        <div class="availability">
-          <span class="seats-left">${fmtNum(left)}</span>
-          <span class="seats-label">seats left</span>
-        </div>
-        <div class="bar"><div class="bar-fill ${cls}" style="width:${pct}%"></div></div>
-        <div class="meta">
-          <span>${fmtNum(sold)} sold</span>
-          <span>${pct}% full</span>
+          <div class="card-back">
+            <div class="show-header">
+              <div>
+                <div class="show-day">${day}</div>
+                <div class="show-date">${dateLabel}</div>
+              </div>
+            </div>
+            <div class="back-chart" data-chart-pending="1"></div>
+          </div>
         </div>
       </article>
     `;
+  }
+
+  // Tickets sold on each calendar day, derived from snapshot deltas
+  // (latest snapshot of day N minus latest snapshot of day N-1). Days
+  // are bucketed in Cayman time so they align with the rest of the page.
+  // The first day in the history has no prior baseline and is dropped.
+  function dailySales(snapshots) {
+    if (!snapshots || !snapshots.length) return [];
+    const dayFmt = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'America/Cayman',
+      year: 'numeric', month: '2-digit', day: '2-digit',
+    });
+    const byDay = new Map();
+    for (const snap of snapshots) {
+      const ts = Date.parse(snap.t);
+      if (Number.isNaN(ts)) continue;
+      const dayKey = dayFmt.format(new Date(ts));
+      const total = Object.values(snap.sold).reduce((a, b) => a + b, 0);
+      const prev = byDay.get(dayKey);
+      if (!prev || ts > prev.ts) byDay.set(dayKey, { dayKey, ts, total });
+    }
+    const days = [...byDay.values()].sort((a, b) => a.dayKey.localeCompare(b.dayKey));
+    const out = [];
+    for (let i = 1; i < days.length; i++) {
+      out.push({ dayKey: days[i].dayKey, total: Math.max(0, days[i].total - days[i - 1].total) });
+    }
+    return out;
+  }
+
+  // Same idea as dailySales, but tracking a single show by id. The history
+  // bucket key is a string, so coerce.
+  function showDailySales(showId, snapshots) {
+    if (!snapshots || !snapshots.length) return [];
+    const key = String(showId);
+    const dayFmt = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'America/Cayman',
+      year: 'numeric', month: '2-digit', day: '2-digit',
+    });
+    const byDay = new Map();
+    for (const snap of snapshots) {
+      const sold = snap.sold?.[key];
+      if (sold == null) continue;
+      const ts = Date.parse(snap.t);
+      if (Number.isNaN(ts)) continue;
+      const dayKey = dayFmt.format(new Date(ts));
+      const prev = byDay.get(dayKey);
+      if (!prev || ts > prev.ts) byDay.set(dayKey, { dayKey, ts, total: sold });
+    }
+    const days = [...byDay.values()].sort((a, b) => a.dayKey.localeCompare(b.dayKey));
+    const out = [];
+    for (let i = 1; i < days.length; i++) {
+      out.push({ dayKey: days[i].dayKey, total: Math.max(0, days[i].total - days[i - 1].total) });
+    }
+    return out;
+  }
+
+  function niceCeil(v) {
+    if (v <= 0) return 1;
+    if (v <= 5) return Math.ceil(v);
+    if (v <= 10) return Math.ceil(v / 2) * 2;
+    if (v <= 50) return Math.ceil(v / 5) * 5;
+    if (v <= 200) return Math.ceil(v / 25) * 25;
+    return Math.ceil(v / 50) * 50;
+  }
+
+  function renderChart(points, opts = {}) {
+    if (!points.length) return '';
+    const W = opts.w ?? 800;
+    const H = opts.h ?? 200;
+    const P = opts.padding ?? { l: 56, r: 16, t: 16, b: 32 };
+    const fontSize = opts.fontSize ?? 11;
+    const ariaLabel = opts.ariaLabel ?? 'Tickets sold per day';
+    const xs = points.map(p => Date.parse(p.dayKey));
+    const ys = points.map(p => p.total);
+    const xMin = Math.min(...xs), xMax = Math.max(...xs);
+    const yMax = Math.max(...ys, 0);
+    const niceMax = niceCeil(yMax);
+    const xRange = xMax - xMin;
+    const plotW = W - P.l - P.r;
+    const plotH = H - P.t - P.b;
+    const sx = x => xRange === 0
+      ? P.l + plotW / 2
+      : P.l + ((x - xMin) / xRange) * plotW;
+    const sy = y => H - P.b - (y / niceMax) * plotH;
+
+    const ticks = niceMax <= 4 ? niceMax : 4;
+    const yLines = [];
+    for (let i = 0; i <= ticks; i++) {
+      const v = (niceMax * i) / ticks;
+      const y = sy(v);
+      yLines.push(`<line class="grid" x1="${P.l}" x2="${W - P.r}" y1="${y}" y2="${y}"/>`);
+      const tickLabel = Number.isInteger(v) ? v.toLocaleString() : v.toFixed(1);
+      yLines.push(`<text class="ylabel" x="${P.l - 8}" y="${y + fontSize / 3}">${tickLabel}</text>`);
+    }
+
+    const labelEvery = opts.labelEvery ?? Math.max(1, Math.ceil(points.length / 8));
+    const xLabels = points.map((p, i) => {
+      if (i !== 0 && i !== points.length - 1 && i % labelEvery !== 0) return '';
+      const x = sx(Date.parse(p.dayKey));
+      const [y, m, d] = p.dayKey.split('-');
+      const label = new Date(+y, +m - 1, +d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+      return `<text class="xlabel" x="${x}" y="${H - P.b + fontSize + 6}">${label}</text>`;
+    }).join('');
+
+    const coords = points.map(p => [sx(Date.parse(p.dayKey)), sy(p.total)]);
+    const linePath = coords.map(([x, y], i) => `${i === 0 ? 'M' : 'L'}${x},${y}`).join(' ');
+    const areaPath = points.length > 1
+      ? `${linePath} L${coords[coords.length - 1][0]},${H - P.b} L${coords[0][0]},${H - P.b} Z`
+      : '';
+
+    const dotR = opts.dotRadius ?? 3.5;
+    const dots = coords.map(([x, y], i) => {
+      const p = points[i];
+      const [yy, mm, dd] = p.dayKey.split('-');
+      const label = new Date(+yy, +mm - 1, +dd).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+      return `<circle class="dot" cx="${x}" cy="${y}" r="${dotR}"><title>${label}: ${p.total.toLocaleString()} sold</title></circle>`;
+    }).join('');
+
+    return `
+      <svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="${ariaLabel}" style="font-size:${fontSize}px">
+        ${yLines.join('')}
+        ${areaPath ? `<path class="area" d="${areaPath}"/>` : ''}
+        <path class="line" d="${linePath}"/>
+        ${dots}
+        ${xLabels}
+      </svg>
+    `;
+  }
+
+  const miniChartOpts = {
+    w: 320, h: 180,
+    padding: { l: 32, r: 10, t: 10, b: 22 },
+    fontSize: 10,
+    labelEvery: 1,
+    dotRadius: 3,
+    ariaLabel: 'Tickets sold per day for this performance',
+  };
+
+  const chartPoints = dailySales(history.snapshots);
+  if (chartPoints.length) {
+    document.getElementById('chart').innerHTML = renderChart(chartPoints);
+    document.getElementById('chart-section').hidden = false;
   }
 
   // Group shows by Monday-of-the-week
@@ -501,6 +753,37 @@
       </section>
     `;
   }).join('');
+
+  function setCardFlipped(card, flipped) {
+    if (card.classList.contains('flipped') === flipped) return;
+    if (flipped) {
+      const slot = card.querySelector('.back-chart[data-chart-pending]');
+      if (slot) {
+        const pts = showDailySales(card.dataset.showId, history.snapshots);
+        slot.innerHTML = pts.length
+          ? renderChart(pts, miniChartOpts)
+          : '<div class="back-empty">Not enough history yet.</div>';
+        slot.removeAttribute('data-chart-pending');
+      }
+    }
+    card.classList.toggle('flipped', flipped);
+    card.setAttribute('aria-pressed', flipped ? 'true' : 'false');
+  }
+  function flipAllFrom(card) {
+    const target = !card.classList.contains('flipped');
+    for (const c of weeksEl.querySelectorAll('.show')) setCardFlipped(c, target);
+  }
+  weeksEl.addEventListener('click', (e) => {
+    const card = e.target.closest('.show');
+    if (card) flipAllFrom(card);
+  });
+  weeksEl.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    const card = e.target.closest('.show');
+    if (!card) return;
+    e.preventDefault();
+    flipAllFrom(card);
+  });
 
   if (lastModified) {
     const d = new Date(lastModified);
