@@ -635,13 +635,17 @@
     return out;
   }
 
-  function niceCeil(v) {
-    if (v <= 0) return 1;
-    if (v <= 5) return Math.ceil(v);
-    if (v <= 10) return Math.ceil(v / 2) * 2;
-    if (v <= 50) return Math.ceil(v / 5) * 5;
-    if (v <= 200) return Math.ceil(v / 25) * 25;
-    return Math.ceil(v / 50) * 50;
+  // Pick a nice integer tick step so y-axis labels never have decimals.
+  function niceTickStep(v) {
+    if (v <= 4) return 1;
+    if (v <= 10) return 2;
+    if (v <= 25) return 5;
+    if (v <= 50) return 10;
+    if (v <= 100) return 20;
+    if (v <= 250) return 50;
+    if (v <= 500) return 100;
+    if (v <= 1000) return 200;
+    return 500;
   }
 
   function renderChart(points, opts = {}) {
@@ -655,7 +659,8 @@
     const ys = points.map(p => p.total);
     const xMin = Math.min(...xs), xMax = Math.max(...xs);
     const yMax = Math.max(...ys, 0);
-    const niceMax = niceCeil(yMax);
+    const step = niceTickStep(yMax);
+    const niceMax = Math.max(step, Math.ceil(yMax / step) * step);
     const xRange = xMax - xMin;
     const plotW = W - P.l - P.r;
     const plotH = H - P.t - P.b;
@@ -664,14 +669,11 @@
       : P.l + ((x - xMin) / xRange) * plotW;
     const sy = y => H - P.b - (y / niceMax) * plotH;
 
-    const ticks = niceMax <= 4 ? niceMax : 4;
     const yLines = [];
-    for (let i = 0; i <= ticks; i++) {
-      const v = (niceMax * i) / ticks;
+    for (let v = 0; v <= niceMax + 1e-9; v += step) {
       const y = sy(v);
       yLines.push(`<line class="grid" x1="${P.l}" x2="${W - P.r}" y1="${y}" y2="${y}"/>`);
-      const tickLabel = Number.isInteger(v) ? v.toLocaleString() : v.toFixed(1);
-      yLines.push(`<text class="ylabel" x="${P.l - 8}" y="${y + fontSize / 3}">${tickLabel}</text>`);
+      yLines.push(`<text class="ylabel" x="${P.l - 8}" y="${y + fontSize / 3}">${Math.round(v).toLocaleString()}</text>`);
     }
 
     const labelEvery = opts.labelEvery ?? Math.max(1, Math.ceil(points.length / 8));
