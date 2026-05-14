@@ -203,6 +203,7 @@
 
   @media (max-width: 520px) {
     .week-grid { grid-template-columns: 1fr; }
+    .card-front { justify-content: space-between; }
   }
 
   .show {
@@ -647,7 +648,7 @@
     if (!points.length) return '';
     const W = opts.w ?? 800;
     const H = opts.h ?? 200;
-    const P = opts.padding ?? { l: 56, r: 16, t: 16, b: 32 };
+    const P = opts.padding ?? { l: 56, r: 28, t: 16, b: 32 };
     const fontSize = opts.fontSize ?? 11;
     const ariaLabel = opts.ariaLabel ?? 'Tickets sold per day';
     const xs = points.map(p => Date.parse(p.dayKey));
@@ -697,7 +698,7 @@
     }).join('');
 
     return `
-      <svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="${ariaLabel}" style="font-size:${fontSize}px">
+      <svg class="chart" overflow="visible" viewBox="0 0 ${W} ${H}" role="img" aria-label="${ariaLabel}" style="font-size:${fontSize}px">
         ${yLines.join('')}
         ${areaPath ? `<path class="area" d="${areaPath}"/>` : ''}
         <path class="line" d="${linePath}"/>
@@ -709,16 +710,23 @@
 
   const miniChartOpts = {
     w: 320, h: 180,
-    padding: { l: 32, r: 10, t: 10, b: 22 },
+    padding: { l: 32, r: 22, t: 10, b: 22 },
     fontSize: 10,
     labelEvery: 1,
     dotRadius: 3,
     ariaLabel: 'Tickets sold per day for this performance',
   };
 
+  // On mobile, render the top chart with a taller aspect so its height
+  // matches a day card (which is driven by the back-chart's intrinsic aspect).
+  const isMobileView = window.matchMedia('(max-width: 520px)').matches;
+  const mainChartOpts = isMobileView
+    ? { w: 320, h: 224, padding: { l: 40, r: 26, t: 14, b: 30 }, fontSize: 12 }
+    : undefined;
+
   const chartPoints = dailySales(history.snapshots);
   if (chartPoints.length) {
-    document.getElementById('chart').innerHTML = renderChart(chartPoints);
+    document.getElementById('chart').innerHTML = renderChart(chartPoints, mainChartOpts);
     document.getElementById('chart-section').hidden = false;
   }
 
@@ -752,18 +760,20 @@
     `;
   }).join('');
 
+  // Render every back-chart up front so cards have their final height from
+  // the start — otherwise the card grows on first flip and the front layout
+  // visibly reshuffles.
+  for (const slot of weeksEl.querySelectorAll('.back-chart[data-chart-pending]')) {
+    const card = slot.closest('.show');
+    const pts = showDailySales(card.dataset.showId, history.snapshots);
+    slot.innerHTML = pts.length
+      ? renderChart(pts, miniChartOpts)
+      : '<div class="back-empty">Not enough history yet.</div>';
+    slot.removeAttribute('data-chart-pending');
+  }
+
   function setCardFlipped(card, flipped) {
     if (card.classList.contains('flipped') === flipped) return;
-    if (flipped) {
-      const slot = card.querySelector('.back-chart[data-chart-pending]');
-      if (slot) {
-        const pts = showDailySales(card.dataset.showId, history.snapshots);
-        slot.innerHTML = pts.length
-          ? renderChart(pts, miniChartOpts)
-          : '<div class="back-empty">Not enough history yet.</div>';
-        slot.removeAttribute('data-chart-pending');
-      }
-    }
     card.classList.toggle('flipped', flipped);
     card.setAttribute('aria-pressed', flipped ? 'true' : 'false');
   }
