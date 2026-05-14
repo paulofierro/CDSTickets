@@ -22,15 +22,15 @@
       "id": 1792,
       "date": "30 May, 2026",
       "time": "7:30 PM - 10:00 PM",
-      "seats_left": 69,
-      "seats_sold": 61
+      "seats_left": 67,
+      "seats_sold": 63
     },
     {
       "id": 1793,
       "date": "31 May, 2026",
       "time": "3:00 PM - 6:00 PM",
-      "seats_left": 101,
-      "seats_sold": 29
+      "seats_left": 100,
+      "seats_sold": 30
     },
     {
       "id": 1794,
