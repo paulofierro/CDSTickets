@@ -667,12 +667,24 @@
       yLines.push(`<text class="ylabel" x="${P.l - 8}" y="${y + fontSize / 3}">${Math.round(v).toLocaleString()}</text>`);
     }
 
+    const todayKey = opts.markToday
+      ? new Intl.DateTimeFormat('en-CA', {
+          timeZone: 'America/Cayman',
+          year: 'numeric', month: '2-digit', day: '2-digit',
+        }).format(new Date())
+      : null;
+
     const labelEvery = opts.labelEvery ?? Math.max(1, Math.ceil(points.length / 8));
     const xLabels = points.map((p, i) => {
       if (i !== 0 && i !== points.length - 1 && i % labelEvery !== 0) return '';
       const x = sx(i);
-      const [y, m, d] = p.dayKey.split('-');
-      const label = new Date(+y, +m - 1, +d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+      let label;
+      if (p.dayKey === todayKey) {
+        label = 'Today';
+      } else {
+        const [y, m, d] = p.dayKey.split('-');
+        label = new Date(+y, +m - 1, +d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+      }
       return `<text class="xlabel" x="${x}" y="${H - P.b + fontSize + 6}">${label}</text>`;
     }).join('');
 
@@ -706,8 +718,8 @@
   // matches a day card (which is driven by the back-chart's intrinsic aspect).
   const isMobileView = window.matchMedia('(max-width: 520px)').matches;
   const mainChartOpts = isMobileView
-    ? { w: 320, h: 224, padding: { l: 40, r: 26, t: 14, b: 30 }, fontSize: 12 }
-    : undefined;
+    ? { w: 320, h: 224, padding: { l: 40, r: 26, t: 14, b: 30 }, fontSize: 12, markToday: true }
+    : { markToday: true };
 
   const chartPoints = dailySales(history.snapshots);
   if (chartPoints.length) {
