@@ -159,15 +159,8 @@
     text-transform: uppercase;
   }
   .chart { width: 100%; height: auto; display: block; overflow: visible; }
-  .chart .line {
-    stroke: var(--accent);
-    stroke-width: 2;
-    stroke-linejoin: round;
-    stroke-linecap: round;
-    fill: none;
-  }
-  .chart .area { fill: var(--accent); opacity: 0.08; }
-  .chart .dot { fill: var(--accent); }
+  .chart .col { fill: var(--accent); }
+  .chart .col:hover { opacity: 0.85; }
   .chart .grid { stroke: var(--border); stroke-width: 1; }
   .chart text {
     fill: var(--muted);
@@ -655,19 +648,17 @@
     const P = opts.padding ?? { l: 56, r: 28, t: 16, b: 32 };
     const fontSize = opts.fontSize ?? 11;
     const ariaLabel = opts.ariaLabel ?? 'Tickets sold per day';
-    const xs = points.map(p => Date.parse(p.dayKey));
     const ys = points.map(p => p.total);
-    const xMin = Math.min(...xs), xMax = Math.max(...xs);
     const yMax = Math.max(...ys, 0);
     const step = niceTickStep(yMax);
     const niceMax = Math.max(step, Math.ceil(yMax / step) * step);
-    const xRange = xMax - xMin;
     const plotW = W - P.l - P.r;
     const plotH = H - P.t - P.b;
-    const sx = x => xRange === 0
-      ? P.l + plotW / 2
-      : P.l + ((x - xMin) / xRange) * plotW;
-    const sy = y => H - P.b - (y / niceMax) * plotH;
+    const slot = plotW / points.length;
+    const barGap = Math.max(2, Math.min(8, slot * 0.25));
+    const barW = Math.max(1, slot - barGap);
+    const sx = i => P.l + slot * i + slot / 2;
+    const sy = y => H - P.b - (niceMax === 0 ? 0 : (y / niceMax) * plotH);
 
     const yLines = [];
     for (let v = 0; v <= niceMax + 1e-9; v += step) {
@@ -679,32 +670,24 @@
     const labelEvery = opts.labelEvery ?? Math.max(1, Math.ceil(points.length / 8));
     const xLabels = points.map((p, i) => {
       if (i !== 0 && i !== points.length - 1 && i % labelEvery !== 0) return '';
-      const x = sx(Date.parse(p.dayKey));
+      const x = sx(i);
       const [y, m, d] = p.dayKey.split('-');
       const label = new Date(+y, +m - 1, +d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
       return `<text class="xlabel" x="${x}" y="${H - P.b + fontSize + 6}">${label}</text>`;
     }).join('');
 
-    const coords = points.map(p => [sx(Date.parse(p.dayKey)), sy(p.total)]);
-    const linePath = coords.map(([x, y], i) => `${i === 0 ? 'M' : 'L'}${x},${y}`).join(' ');
-    const areaPath = points.length > 1
-      ? `${linePath} L${coords[coords.length - 1][0]},${H - P.b} L${coords[0][0]},${H - P.b} Z`
-      : '';
-
-    const dotR = opts.dotRadius ?? 3.5;
-    const dots = coords.map(([x, y], i) => {
-      const p = points[i];
-      const [yy, mm, dd] = p.dayKey.split('-');
-      const label = new Date(+yy, +mm - 1, +dd).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
-      return `<circle class="dot" cx="${x}" cy="${y}" r="${dotR}"><title>${label}: ${p.total.toLocaleString()} sold</title></circle>`;
+    const baseY = H - P.b;
+    const bars = points.map((p, i) => {
+      const cx = sx(i);
+      const yTop = sy(p.total);
+      const h = Math.max(0, baseY - yTop);
+      return `<rect class="col" x="${cx - barW / 2}" y="${yTop}" width="${barW}" height="${h}" rx="2" ry="2"><title>${p.total.toLocaleString()} sold</title></rect>`;
     }).join('');
 
     return `
       <svg class="chart" overflow="visible" viewBox="0 0 ${W} ${H}" role="img" aria-label="${ariaLabel}" style="font-size:${fontSize}px">
         ${yLines.join('')}
-        ${areaPath ? `<path class="area" d="${areaPath}"/>` : ''}
-        <path class="line" d="${linePath}"/>
-        ${dots}
+        ${bars}
         ${xLabels}
       </svg>
     `;
