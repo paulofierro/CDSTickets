@@ -22,7 +22,18 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Capture previous total
+        id: prev
+        run: |
+          if [ -f seats.json ]; then
+            prev=$(jq '[.shows[].seats_sold] | add // 0' seats.json)
+          else
+            prev=0
+          fi
+          echo "total=$prev" >> "$GITHUB_OUTPUT"
+
       - name: Run scraper
+        id: scrape
         run: python fetch_seats.py
 
       - name: Append history snapshot
@@ -39,3 +50,41 @@ jobs:
           git add seats.json history.json
           git commit -m "Update seats.json"
           git push
+
+      - name: Notify via Brrr (success)
+        if: steps.scrape.outcome == 'success'
+        shell: bash
+        env:
+          NOTIFICATION_KEY: ${{ secrets.NOTIFICATION_KEY }}
+          PREV_TOTAL: ${{ steps.prev.outputs.total }}
+        run: |
+          new_total=$(jq '[.shows[].seats_sold] | add // 0' seats.json)
+          delta=$(( new_total - PREV_TOTAL ))
+          msg="New tickets sold: $delta, Total tickets sold: $new_total"
+
+          curl -fsS -X POST "https://api.brrr.now/v1/$NOTIFICATION_KEY" \
+            -H 'Content-Type: application/json' \
+            -d '{
+              "message": "'"$msg"'",
+              "title": "🎟️ Sales Updated ✅",
+              "sound": "bubble_ding"
+            }'
+
+      - name: Notify via Brrr (failure)
+        if: failure()
+        shell: bash
+        env:
+          NOTIFICATION_KEY: ${{ secrets.NOTIFICATION_KEY }}
+        run: |
+          expiration=$(date -u -d "+24 hours" +"%Y-%m-%dT%H:%M:%S.000Z")
+
+          curl -fsS -X POST "https://api.brrr.now/v1/$NOTIFICATION_KEY" \
+            -H 'Content-Type: application/json' \
+            -d '{
+              "message": "Job #${{ github.run_number }} failed.",
+              "title": "🎟️ Sales Update Failed ❌",
+              "sound": "warm_soft_error",
+              "open_url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}",
+              "expiration_date": "'"$expiration"'",
+              "interruption_level": "time-sensitive"
+            }'
