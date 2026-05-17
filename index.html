@@ -675,15 +675,22 @@
       : null;
 
     const labelEvery = opts.labelEvery ?? Math.max(1, Math.ceil(points.length / 8));
+    let lastRenderedMonth = null;
     const xLabels = points.map((p, i) => {
-      if (i !== 0 && i !== points.length - 1 && i % labelEvery !== 0) return '';
+      const shouldRender = i === 0 || i === points.length - 1 || i % labelEvery === 0;
+      if (!shouldRender) return '';
       const x = sx(i);
       let label;
       if (p.dayKey === todayKey) {
         label = 'Today';
       } else {
         const [y, m, d] = p.dayKey.split('-');
-        label = new Date(+y, +m - 1, +d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+        if (lastRenderedMonth !== m) {
+          label = new Date(+y, +m - 1, +d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+          lastRenderedMonth = m;
+        } else {
+          label = String(+d);
+        }
       }
       return `<text class="xlabel" x="${x}" y="${H - P.b + fontSize + 6}">${label}</text>`;
     }).join('');
