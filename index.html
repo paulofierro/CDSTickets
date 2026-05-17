@@ -686,7 +686,7 @@
       } else {
         const [y, m, d] = p.dayKey.split('-');
         if (lastRenderedMonth !== m) {
-          label = new Date(+y, +m - 1, +d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+          label = new Date(+y, +m - 1, +d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
           lastRenderedMonth = m;
         } else {
           label = String(+d);
