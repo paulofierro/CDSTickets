@@ -725,8 +725,8 @@
   // matches a day card (which is driven by the back-chart's intrinsic aspect).
   const isMobileView = window.matchMedia('(max-width: 520px)').matches;
   const mainChartOpts = isMobileView
-    ? { w: 320, h: 224, padding: { l: 40, r: 26, t: 14, b: 30 }, fontSize: 12, markToday: true }
-    : { markToday: true };
+    ? { w: 320, h: 224, padding: { l: 40, r: 26, t: 14, b: 30 }, fontSize: 12, markToday: true, labelEvery: 1 }
+    : { markToday: true, labelEvery: 1 };
 
   const chartPoints = dailySales(history.snapshots);
   if (chartPoints.length) {
