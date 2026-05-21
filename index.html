@@ -158,7 +158,9 @@
     letter-spacing: 0.08em;
     text-transform: uppercase;
   }
+  #chart { overflow-x: auto; -webkit-overflow-scrolling: touch; }
   .chart { width: 100%; height: auto; display: block; overflow: visible; }
+  #chart .chart { max-width: none; }
   .chart .col { fill: var(--accent); }
   .chart .col:hover { opacity: 0.85; }
   .chart .grid { stroke: var(--border); stroke-width: 1; }
@@ -167,6 +169,7 @@
     font-variant-numeric: tabular-nums;
   }
   .chart .ylabel { text-anchor: end; }
+  .chart .ylabel-right { text-anchor: start; }
   .chart .xlabel { text-anchor: middle; }
 
   .weeks {
@@ -643,18 +646,21 @@
 
   function renderChart(points, opts = {}) {
     if (!points.length) return '';
-    const W = opts.w ?? 800;
     const H = opts.h ?? 200;
     const P = opts.padding ?? { l: 56, r: 28, t: 16, b: 32 };
     const fontSize = opts.fontSize ?? 11;
     const ariaLabel = opts.ariaLabel ?? 'Tickets sold per day';
+    const fixedSlot = opts.fixedSlot;
+    const W = fixedSlot
+      ? Math.round(points.length * fixedSlot + P.l + P.r)
+      : (opts.w ?? 800);
     const ys = points.map(p => p.total);
     const yMax = Math.max(...ys, 0);
     const step = niceTickStep(yMax);
     const niceMax = Math.max(step, Math.ceil(yMax / step) * step);
     const plotW = W - P.l - P.r;
     const plotH = H - P.t - P.b;
-    const slot = plotW / points.length;
+    const slot = fixedSlot ?? plotW / points.length;
     const barGap = Math.max(2, Math.min(8, slot * 0.25));
     const barW = Math.max(1, slot - barGap);
     const sx = i => P.l + slot * i + slot / 2;
@@ -663,8 +669,10 @@
     const yLines = [];
     for (let v = 0; v <= niceMax + 1e-9; v += step) {
       const y = sy(v);
+      const label = Math.round(v).toLocaleString();
       yLines.push(`<line class="grid" x1="${P.l}" x2="${W - P.r}" y1="${y}" y2="${y}"/>`);
-      yLines.push(`<text class="ylabel" x="${P.l - 8}" y="${y + fontSize / 3}">${Math.round(v).toLocaleString()}</text>`);
+      yLines.push(`<text class="ylabel" x="${P.l - 8}" y="${y + fontSize / 3}">${label}</text>`);
+      yLines.push(`<text class="ylabel-right" x="${W - P.r + 8}" y="${y + fontSize / 3}">${label}</text>`);
     }
 
     const todayKey = opts.markToday
@@ -703,8 +711,9 @@
       return `<rect class="col" x="${cx - barW / 2}" y="${yTop}" width="${barW}" height="${h}" rx="2" ry="2"><title>${p.total.toLocaleString()} sold</title></rect>`;
     }).join('');
 
+    const sizeStyle = fixedSlot ? `width:${W}px;` : '';
     return `
-      <svg class="chart" overflow="visible" viewBox="0 0 ${W} ${H}" role="img" aria-label="${ariaLabel}" style="font-size:${fontSize}px">
+      <svg class="chart" overflow="visible" viewBox="0 0 ${W} ${H}" role="img" aria-label="${ariaLabel}" style="font-size:${fontSize}px;${sizeStyle}">
         ${yLines.join('')}
         ${bars}
         ${xLabels}
@@ -723,15 +732,50 @@
 
   // On mobile, render the top chart with a taller aspect so its height
   // matches a day card (which is driven by the back-chart's intrinsic aspect).
-  const isMobileView = window.matchMedia('(max-width: 520px)').matches;
-  const mainChartOpts = isMobileView
-    ? { w: 320, h: 224, padding: { l: 40, r: 26, t: 14, b: 30 }, fontSize: 12, markToday: true, labelEvery: 1 }
-    : { markToday: true, labelEvery: 1 };
 
   const chartPoints = dailySales(history.snapshots);
   if (chartPoints.length) {
-    document.getElementById('chart').innerHTML = renderChart(chartPoints, mainChartOpts);
+    const chartEl = document.getElementById('chart');
+    // Unhide before measuring so clientWidth is non-zero on desktop.
     document.getElementById('chart-section').hidden = false;
+
+    let isInitialRender = true;
+
+    function drawMainChart() {
+      const isMobileView = window.matchMedia('(max-width: 520px)').matches;
+      let mainChartOpts;
+      if (isMobileView) {
+        mainChartOpts = { fixedSlot: 26, h: 224, padding: { l: 40, r: 40, t: 14, b: 30 }, fontSize: 12, markToday: true, labelEvery: 1 };
+      } else {
+        const padding = { l: 56, r: 44, t: 16, b: 32 };
+        const minSlot = 32;
+        const available = chartEl.clientWidth - padding.l - padding.r;
+        const slot = Math.max(minSlot, available / chartPoints.length);
+        mainChartOpts = { fixedSlot: slot, padding, markToday: true, labelEvery: 1 };
+      }
+
+      // Preserve the user's offset from the right edge across redraws;
+      // on first render, that offset is zero so we land flush against today.
+      const distFromRight = isInitialRender
+        ? 0
+        : Math.max(0, chartEl.scrollWidth - chartEl.scrollLeft - chartEl.clientWidth);
+
+      chartEl.innerHTML = renderChart(chartPoints, mainChartOpts);
+
+      requestAnimationFrame(() => {
+        chartEl.scrollLeft = Math.max(0, chartEl.scrollWidth - chartEl.clientWidth - distFromRight);
+      });
+
+      isInitialRender = false;
+    }
+
+    drawMainChart();
+
+    let resizeTimer = null;
+    window.addEventListener('resize', () => {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(drawMainChart, 100);
+    });
   }
 
   // Group shows by Monday-of-the-week
