@@ -13,6 +13,20 @@ BOOKING_URL = f"{BASE}/booking"
 SEATS_URL = f"{BASE}/GetNoOfTickets"
 CATEGORY = "2"
 
+# Extra events whose dates should be merged into the main event's show list,
+# overriding any matching date. Used when a single performance gets moved to
+# a separate listing (e.g. the June 11 Pay-as-you-Can night for In The Heights).
+OVERRIDE_EVENT_IDS = [451]
+
+# Phantom seats added on top of the scraped numbers, by date. Used to account
+# for valid bookings or capacity that the current booking page no longer
+# exposes — e.g. June 11 has 6 legacy paid bookings still in the room and
+# PWYC reports a 120-seat pool, so we pad +6 sold and +4 left to reach the
+# 130-seat house capacity.
+PHANTOM_ADJUSTMENTS = {
+    "11 Jun, 2026": {"left": 4, "sold": 6},
+}
+
 
 def build_opener():
     cj = CookieJar()
@@ -95,19 +109,15 @@ def parse_seats(html):
     return None, sold
 
 
-def main():
-    opener = build_opener()
-
+def fetch_event_shows(opener, event_id):
+    """Scrape the booking page for one event and return its list of shows."""
     listing = get(opener, LIST_URL, headers={"User-Agent": "Mozilla/5.0"})
     csrf = extract_csrf(listing)
-    event_id = extract_event_id(listing)
-    title = extract_event_title(listing, event_id)
-    print(f"Event: {title} (id={event_id})", file=sys.stderr)
 
     booking = post(
         opener,
         BOOKING_URL,
-        {"csrf_srm": csrf, "EventId": event_id, "EventRegType": "Y"},
+        {"csrf_srm": csrf, "EventId": str(event_id), "EventRegType": "Y"},
         headers={
             "User-Agent": "Mozilla/5.0",
             "Referer": LIST_URL,
@@ -116,9 +126,8 @@ def main():
     )
     csrf = extract_csrf(booking)  # CSRF rotates per page load
     dates = extract_dates(booking)
-    print(f"Found {len(dates)} dates", file=sys.stderr)
 
-    results = []
+    shows = []
     for date_id, label in dates:
         date_part, time_part = parse_label(label)
         resp = post(
@@ -126,7 +135,7 @@ def main():
             SEATS_URL,
             {
                 "csrf_srm": csrf,
-                "EventID": event_id,
+                "EventID": str(event_id),
                 "EventDate": date_id,
                 "catdata": CATEGORY,
             },
@@ -138,22 +147,62 @@ def main():
             },
         )
         seats_left, seats_sold = parse_seats(resp)
-        entry = {
+        shows.append({
             "id": int(date_id),
             "date": date_part,
             "time": time_part,
             "seats_left": seats_left,
             "seats_sold": seats_sold,
-        }
-        results.append(entry)
+        })
         print(
             f"  {date_part} {time_part}: left={seats_left}, sold={seats_sold}",
+            file=sys.stderr,
+        )
+    return shows
+
+
+def main():
+    opener = build_opener()
+
+    listing = get(opener, LIST_URL, headers={"User-Agent": "Mozilla/5.0"})
+    event_id = extract_event_id(listing)
+    title = extract_event_title(listing, event_id)
+    print(f"Event: {title} (id={event_id})", file=sys.stderr)
+
+    shows = fetch_event_shows(opener, event_id)
+    print(f"Found {len(shows)} dates on main event", file=sys.stderr)
+
+    for override_id in OVERRIDE_EVENT_IDS:
+        print(f"Override event: id={override_id}", file=sys.stderr)
+        for override_show in fetch_event_shows(opener, override_id):
+            idx = next(
+                (i for i, s in enumerate(shows) if s["date"] == override_show["date"]),
+                None,
+            )
+            if idx is not None:
+                print(
+                    f"    replaces {override_show['date']} (was id={shows[idx]['id']}, now id={override_show['id']})",
+                    file=sys.stderr,
+                )
+                shows[idx] = override_show
+            else:
+                shows.append(override_show)
+
+    for show in shows:
+        adj = PHANTOM_ADJUSTMENTS.get(show["date"])
+        if not adj:
+            continue
+        show["seats_left"] = (show["seats_left"] or 0) + adj["left"]
+        show["seats_sold"] = (show["seats_sold"] or 0) + adj["sold"]
+        print(
+            f"Phantom {show['date']}: +{adj['left']} left, +{adj['sold']} sold "
+            f"-> left={show['seats_left']}, sold={show['seats_sold']}",
             file=sys.stderr,
         )
 
     payload = {
         "event": {"id": int(event_id), "title": title},
-        "shows": results,
+        "shows": shows,
     }
     with open("seats.json", "w") as f:
         json.dump(payload, f, indent=2)
