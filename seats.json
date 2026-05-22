@@ -22,8 +22,8 @@
       "id": 1792,
       "date": "30 May, 2026",
       "time": "7:30 PM - 10:00 PM",
-      "seats_left": 52,
-      "seats_sold": 78
+      "seats_left": 48,
+      "seats_sold": 82
     },
     {
       "id": 1793,
@@ -36,8 +36,8 @@
       "id": 1794,
       "date": "04 Jun, 2026",
       "time": "7:30 PM - 10:00 PM",
-      "seats_left": 104,
-      "seats_sold": 26
+      "seats_left": 103,
+      "seats_sold": 27
     },
     {
       "id": 1795,
@@ -50,8 +50,8 @@
       "id": 1796,
       "date": "06 Jun, 2026",
       "time": "7:30 PM - 10:00 PM",
-      "seats_left": 52,
-      "seats_sold": 78
+      "seats_left": 49,
+      "seats_sold": 81
     },
     {
       "id": 1797,
@@ -64,8 +64,8 @@
       "id": 1805,
       "date": "11 Jun, 2026",
       "time": "7:30 PM - 10:00 PM",
-      "seats_left": 116,
-      "seats_sold": 10
+      "seats_left": 112,
+      "seats_sold": 14
     },
     {
       "id": 1799,
