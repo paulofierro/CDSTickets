@@ -189,16 +189,16 @@
 
   .week-grid {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 1rem;
   }
 
   @media (max-width: 900px) {
-    .week-grid { grid-template-columns: repeat(2, 1fr); }
+    .week-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   }
 
   @media (max-width: 520px) {
-    .week-grid { grid-template-columns: 1fr; }
+    .week-grid { grid-template-columns: minmax(0, 1fr); }
     .card-front { justify-content: space-between; }
   }
 
@@ -249,8 +249,9 @@
     flex-direction: column;
     gap: 0.4rem;
   }
-  .back-chart { flex: 1; display: flex; align-items: center; min-height: 0; }
-  .back-chart > svg { width: 100%; }
+  .back-chart { flex: 1; display: flex; align-items: center; min-height: 0; min-width: 0; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .back-chart > svg { flex-shrink: 0; height: auto; }
+  .card-back { min-width: 0; }
   .back-empty {
     color: var(--muted);
     font-size: 0.85rem;
@@ -722,7 +723,7 @@
   }
 
   const miniChartOpts = {
-    w: 320, h: 180,
+    fixedSlot: 18, h: 130,
     padding: { l: 32, r: 22, t: 10, b: 22 },
     fontSize: 10,
     labelEvery: 1,
@@ -818,6 +819,7 @@
       ? renderChart(pts, miniChartOpts)
       : '<div class="back-empty">Not enough history yet.</div>';
     slot.removeAttribute('data-chart-pending');
+    if (pts.length) slot.scrollLeft = slot.scrollWidth;
   }
 
   function setCardFlipped(card, flipped) {
