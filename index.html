@@ -164,6 +164,27 @@
   .chart .col { fill: var(--accent); }
   .chart .col:hover { opacity: 0.85; }
   .chart .grid { stroke: var(--border); stroke-width: 1; }
+
+  .chart-tooltip {
+    position: fixed;
+    z-index: 50;
+    pointer-events: none;
+    background: var(--text);
+    color: var(--bg);
+    font-size: 0.78rem;
+    font-weight: 500;
+    line-height: 1.3;
+    padding: 0.4rem 0.55rem;
+    border-radius: 6px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.18);
+    white-space: nowrap;
+    opacity: 0;
+    transform: translate(-50%, calc(-100% - 8px));
+    transition: opacity 0.1s;
+  }
+  .chart-tooltip.visible { opacity: 1; }
+  .chart-tooltip .tt-date { opacity: 0.7; font-size: 0.72rem; }
+  .chart-tooltip .tt-total { font-variant-numeric: tabular-nums; }
   .chart text {
     fill: var(--muted);
     font-variant-numeric: tabular-nums;
@@ -403,6 +424,7 @@
     </section>
     <div class="weeks" id="weeks"></div>
   </main>
+  <div id="chart-tooltip" class="chart-tooltip" role="tooltip" aria-hidden="true"></div>
 
   <footer>
     <!-- <span id="ts"></span> -->
@@ -709,7 +731,7 @@
       const cx = sx(i);
       const yTop = sy(p.total);
       const h = Math.max(0, baseY - yTop);
-      return `<rect class="col" x="${cx - barW / 2}" y="${yTop}" width="${barW}" height="${h}" rx="2" ry="2"><title>${p.total.toLocaleString()} sold</title></rect>`;
+      return `<rect class="col" x="${cx - barW / 2}" y="${yTop}" width="${barW}" height="${h}" rx="2" ry="2" data-day="${p.dayKey}" data-total="${p.total}"></rect>`;
     }).join('');
 
     const sizeStyle = fixedSlot ? `width:${W}px;` : '';
@@ -842,6 +864,53 @@
     e.preventDefault();
     flipAllFrom(card);
   });
+
+  // Custom chart tooltip — replaces native SVG <title>, which is slow,
+  // ugly, and doesn't surface the date. Uses event delegation so it
+  // covers the main chart and every per-show back-chart without rewiring
+  // after re-renders.
+  const tooltipEl = document.getElementById('chart-tooltip');
+  const ttDateFmt = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/Cayman',
+    weekday: 'short', month: 'short', day: 'numeric',
+  });
+  function formatTooltipDate(dayKey) {
+    const [y, m, d] = dayKey.split('-').map(Number);
+    return ttDateFmt.format(new Date(Date.UTC(y, m - 1, d, 12)));
+  }
+  function showTooltip(target, x, y) {
+    const day = target.getAttribute('data-day');
+    const total = Number(target.getAttribute('data-total'));
+    if (!day) return;
+    tooltipEl.innerHTML =
+      `<div class="tt-date">${formatTooltipDate(day)}</div>` +
+      `<div class="tt-total">${total.toLocaleString()} sold</div>`;
+    tooltipEl.style.left = `${x}px`;
+    tooltipEl.style.top = `${y}px`;
+    tooltipEl.classList.add('visible');
+    tooltipEl.setAttribute('aria-hidden', 'false');
+  }
+  function hideTooltip() {
+    tooltipEl.classList.remove('visible');
+    tooltipEl.setAttribute('aria-hidden', 'true');
+  }
+  document.addEventListener('pointerover', (e) => {
+    const bar = e.target.closest && e.target.closest('rect.col');
+    if (!bar) return;
+    const r = bar.getBoundingClientRect();
+    showTooltip(bar, r.left + r.width / 2, r.top);
+  });
+  document.addEventListener('pointermove', (e) => {
+    const bar = e.target.closest && e.target.closest('rect.col');
+    if (!bar) { hideTooltip(); return; }
+    if (e.pointerType !== 'mouse') return;
+    const r = bar.getBoundingClientRect();
+    showTooltip(bar, r.left + r.width / 2, r.top);
+  });
+  document.addEventListener('pointerout', (e) => {
+    if (e.target.closest && e.target.closest('rect.col')) hideTooltip();
+  });
+  document.addEventListener('scroll', hideTooltip, true);
 
   if (lastModified) {
     const d = new Date(lastModified);
