@@ -563,6 +563,8 @@
     const cap = left + sold;
     const pct = cap ? Math.round((sold / cap) * 100) : 0;
     const { cls, label } = classify(pct);
+    const badgeLabel = show.closed ? `🔒 ${label}` : label;
+    const badgeTitle = show.closed ? ' title="Online ticket sales for this show are closed"' : '';
 
     return `
       <article class="show" data-show-id="${show.id}" tabindex="0" role="button" aria-pressed="false" aria-label="${day} ${dateLabel} — show daily sales">
@@ -573,7 +575,7 @@
                 <div class="show-day">${day}</div>
                 <div class="show-date">${dateLabel}</div>
               </div>
-              <span class="badge ${cls}">${label}</span>
+              <span class="badge ${cls}"${badgeTitle}>${badgeLabel}</span>
             </div>
             <div class="show-time">${show.time || ''}</div>
             <div class="availability">

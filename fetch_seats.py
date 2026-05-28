@@ -26,6 +26,29 @@ PHANTOM_ADJUSTMENTS = {
 }
 
 
+MONTHS = {
+    "Jan": 1, "Feb": 2, "Mar": 3, "Apr": 4, "May": 5, "Jun": 6,
+    "Jul": 7, "Aug": 8, "Sep": 9, "Oct": 10, "Nov": 11, "Dec": 12,
+}
+
+
+def load_existing(path="seats.json"):
+    """Return the previously written payload, or None if absent/unreadable."""
+    try:
+        with open(path) as f:
+            return json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        return None
+
+
+def show_sort_key(show):
+    """Chronological sort key from a "28 May, 2026" date label."""
+    m = re.match(r"(\d+)\s+(\w+),?\s+(\d+)", show.get("date", ""))
+    if not m:
+        return (9999, 99, 99)
+    return (int(m.group(3)), MONTHS.get(m.group(2), 99), int(m.group(1)))
+
+
 def build_opener():
     cj = CookieJar()
     return urllib.request.build_opener(urllib.request.HTTPCookieProcessor(cj))
@@ -197,6 +220,24 @@ def main():
             f"-> left={show['seats_left']}, sold={show['seats_sold']}",
             file=sys.stderr,
         )
+
+    # Once a performance's ticket sales close, it drops out of the booking
+    # dropdown and stops being scraped. Keep the last-known data for any date
+    # we previously had so closed/past shows stay on the dashboard.
+    existing = load_existing()
+    if existing:
+        scraped_dates = {s["date"] for s in shows}
+        for old in existing.get("shows", []):
+            if old.get("date") not in scraped_dates:
+                print(
+                    f"Retaining {old['date']} (id={old.get('id')}) from previous "
+                    f"data — no longer in booking list",
+                    file=sys.stderr,
+                )
+                old["closed"] = True
+                shows.append(old)
+
+    shows.sort(key=show_sort_key)
 
     payload = {
         "event": {"id": int(event_id), "title": title},

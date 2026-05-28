@@ -9,7 +9,8 @@
       "date": "28 May, 2026",
       "time": "7:30 PM - 10:00 PM",
       "seats_left": 66,
-      "seats_sold": 64
+      "seats_sold": 64,
+      "closed": true
     },
     {
       "id": 1791,
