@@ -259,6 +259,10 @@
     border-color: var(--border-strong);
     box-shadow: 0 4px 12px rgba(0,0,0,0.04);
   }
+  .show.past .card-front,
+  .show.past .card-back {
+    background: color-mix(in srgb, var(--surface), var(--muted) 12%);
+  }
   .card-front {
     display: flex;
     flex-direction: column;
@@ -461,6 +465,9 @@
   const monthMap = {Jan:0,Feb:1,Mar:2,Apr:3,May:4,Jun:5,Jul:6,Aug:7,Sep:8,Oct:9,Nov:10,Dec:11};
   const dayNames = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
 
+  const startOfToday = new Date();
+  startOfToday.setHours(0, 0, 0, 0);
+
   function parseShowDate(s) {
     const m = s.match(/(\d+)\s+(\w+),?\s+(\d+)/);
     if (!m) return null;
@@ -563,11 +570,18 @@
     const cap = left + sold;
     const pct = cap ? Math.round((sold / cap) * 100) : 0;
     const { cls, label } = classify(pct);
-    const badgeLabel = show.closed ? '🔒 Closed' : label;
-    const badgeTitle = show.closed ? ' title="Online ticket sales for this show are closed"' : '';
+    const isPast = date && date < startOfToday;
+    let badgeLabel = label, badgeCls = cls, badgeTitle = '';
+    if (isPast) {
+      badgeLabel = '✅ Done';
+      badgeCls = 'good';
+    } else if (show.closed) {
+      badgeLabel = '🔒 Closed';
+      badgeTitle = ' title="Online ticket sales for this show are closed"';
+    }
 
     return `
-      <article class="show" data-show-id="${show.id}" tabindex="0" role="button" aria-pressed="false" aria-label="${day} ${dateLabel} — show daily sales">
+      <article class="show${isPast ? ' past' : ''}" data-show-id="${show.id}" tabindex="0" role="button" aria-pressed="false" aria-label="${day} ${dateLabel} — show daily sales">
         <div class="card-inner">
           <div class="card-front">
             <div class="show-header">
@@ -575,7 +589,7 @@
                 <div class="show-day">${day}</div>
                 <div class="show-date">${dateLabel}</div>
               </div>
-              <span class="badge ${cls}"${badgeTitle}>${badgeLabel}</span>
+              <span class="badge ${badgeCls}"${badgeTitle}>${badgeLabel}</span>
             </div>
             <div class="show-time">${show.time || ''}</div>
             <div class="availability">
