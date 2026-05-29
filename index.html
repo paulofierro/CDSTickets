@@ -563,7 +563,7 @@
     const cap = left + sold;
     const pct = cap ? Math.round((sold / cap) * 100) : 0;
     const { cls, label } = classify(pct);
-    const badgeLabel = show.closed ? `🔒 ${label}` : label;
+    const badgeLabel = show.closed ? '🔒 Closed' : label;
     const badgeTitle = show.closed ? ' title="Online ticket sales for this show are closed"' : '';
 
     return `
