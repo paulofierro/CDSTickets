@@ -346,6 +346,7 @@
   .bar-fill.good { background: var(--good); }
   .bar-fill.warn { background: var(--warn); }
   .bar-fill.bad  { background: var(--bad); }
+  .bar-fill.done { background: var(--muted); }
 
   .meta {
     display: flex;
@@ -368,6 +369,7 @@
   .badge.good { background: var(--good-soft); color: var(--good-text); }
   .badge.warn { background: var(--warn-soft); color: var(--warn-text); }
   .badge.bad  { background: var(--bad-soft);  color: var(--bad-text); }
+  .badge.done { background: color-mix(in srgb, var(--surface), var(--muted) 24%); color: var(--muted); }
 
   .error {
     background: var(--bad-soft);
@@ -573,7 +575,7 @@
     let badgeLabel = label, badgeCls = cls, badgeTitle = '';
     if (isPast) {
       badgeLabel = '✅ Done';
-      badgeCls = 'good';
+      badgeCls = 'done';
     } else if (show.closed) {
       badgeLabel = '🔒 Closed';
       badgeTitle = ' title="Online ticket sales for this show are closed"';
@@ -595,7 +597,7 @@
               <span class="seats-left">${fmtNum(left)}</span>
               <span class="seats-label">seats left</span>
             </div>
-            <div class="bar"><div class="bar-fill ${cls}" style="width:${pct}%"></div></div>
+            <div class="bar"><div class="bar-fill ${isPast ? 'done' : cls}" style="width:${pct}%"></div></div>
             <div class="meta">
               <span>${fmtNum(sold)} sold</span>
               <span>${pct}% full</span>
