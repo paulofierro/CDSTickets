@@ -206,6 +206,38 @@
     letter-spacing: 0.08em;
     text-transform: uppercase;
     margin: 0 0 0.75rem;
+    cursor: pointer;
+    user-select: none;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .week-label:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+    border-radius: 3px;
+  }
+  .week-label::before {
+    content: '▶';
+    font-size: 1em;
+    display: inline-block;
+    transition: transform 0.2s ease;
+    opacity: 0.6;
+    flex-shrink: 0;
+  }
+  .week:not(.collapsed) .week-label::before {
+    transform: rotate(90deg);
+  }
+  .week-grid-wrapper {
+    display: grid;
+    grid-template-rows: 1fr;
+    transition: grid-template-rows 0.25s ease;
+  }
+  .week.collapsed .week-grid-wrapper {
+    grid-template-rows: 0fr;
+  }
+  .week-grid-inner {
+    overflow: hidden;
   }
 
   .week-grid {
@@ -840,10 +872,15 @@
     const ds = items.map(x => x.date).filter(Boolean);
     const range = ds.length ? `${fmtShort(ds[0])} – ${fmtShort(ds[ds.length - 1])}` : '';
     const cards = items.map(({ show, date }) => renderCard(show, date)).join('');
+    const allPast = items.every(({ date }) => date && date < startOfToday);
     return `
-      <section class="week">
-        <h2 class="week-label">Week ${i + 1} · ${range}</h2>
-        <div class="week-grid">${cards}</div>
+      <section class="week${allPast ? ' collapsed' : ''}">
+        <h2 class="week-label" role="button" tabindex="0" aria-expanded="${allPast ? 'false' : 'true'}">Week ${i + 1} · ${range}</h2>
+        <div class="week-grid-wrapper">
+          <div class="week-grid-inner">
+            <div class="week-grid">${cards}</div>
+          </div>
+        </div>
       </section>
     `;
   }).join('');
@@ -872,14 +909,25 @@
   }
   weeksEl.addEventListener('click', (e) => {
     const card = e.target.closest('.show');
-    if (card) flipAllFrom(card);
+    if (card) { flipAllFrom(card); return; }
+    const label = e.target.closest('.week-label');
+    if (label) {
+      const week = label.closest('.week');
+      const collapsed = week.classList.toggle('collapsed');
+      label.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+    }
   });
   weeksEl.addEventListener('keydown', (e) => {
     if (e.key !== 'Enter' && e.key !== ' ') return;
     const card = e.target.closest('.show');
-    if (!card) return;
-    e.preventDefault();
-    flipAllFrom(card);
+    if (card) { e.preventDefault(); flipAllFrom(card); return; }
+    const label = e.target.closest('.week-label');
+    if (label) {
+      e.preventDefault();
+      const week = label.closest('.week');
+      const collapsed = week.classList.toggle('collapsed');
+      label.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+    }
   });
 
   // Custom chart tooltip — replaces native SVG <title>, which is slow,
