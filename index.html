@@ -542,7 +542,6 @@
     return { delta, ageMs: now - Date.parse(baseline.t) };
   }
   const v24h = velocity(24 * 60 * 60 * 1000);
-  const v7d  = velocity(7 * 24 * 60 * 60 * 1000);
 
   const dates = data.shows.map(s => parseShowDate(s.date)).filter(Boolean);
   const range = dates.length
@@ -582,10 +581,6 @@
     <div class="stat">
       <div class="stat-value">${v24h ? fmtDelta(v24h.delta) : '—'}</div>
       <div class="stat-label">Sold in last 24h</div>
-    </div>
-    <div class="stat">
-      <div class="stat-value">${v7d ? fmtDelta(v7d.delta) : '—'}</div>
-      <div class="stat-label">Sold in last 7 days</div>
     </div>
   `;
 
