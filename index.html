@@ -520,8 +520,12 @@
   // Compare only show IDs present in both snapshots so newly-added shows
   // don't inflate the delta. If no snapshot is old enough, fall back to the
   // oldest one so we can still show *some* number until enough history exists.
+  // Only shows with a known sold count participate in velocity; a sold-out
+  // show whose count is briefly missing must not read as a drop to 0.
   const currentSold = Object.fromEntries(
-    data.shows.map(s => [String(s.id), s.seats_sold ?? 0])
+    data.shows
+      .filter(s => s.seats_sold != null)
+      .map(s => [String(s.id), s.seats_sold])
   );
   function velocity(targetMs) {
     if (!history.snapshots || !history.snapshots.length) return null;
@@ -585,7 +589,7 @@
   `;
 
   function classify(pct) {
-    if (pct == 100) return { cls: 'bad',   label: 'Sold out!' };
+    if (pct == 100) return { cls: 'bad',   label: '🥳 Sold out!' };
     if (pct >= 75)  return { cls: 'warn',  label: 'Filling up' };
     return { cls: 'good', label: 'Available' };
   }
@@ -596,7 +600,11 @@
     const left = show.seats_left ?? 0;
     const sold = show.seats_sold ?? 0;
     const cap = left + sold;
-    const pct = cap ? Math.round((sold / cap) * 100) : 0;
+    // A scraped seats_left of exactly 0 means the show is sold out, even if the
+    // ticketing site stopped reporting a sold count once it filled. Force 100%
+    // so the card reads "Sold out!" instead of "0 sold / 0% full".
+    const soldOut = show.seats_left === 0;
+    const pct = soldOut ? 100 : (cap ? Math.round((sold / cap) * 100) : 0);
     const { cls, label } = classify(pct);
     const isPast = date && date < startOfToday;
     let badgeLabel = label, badgeCls = cls, badgeTitle = '';

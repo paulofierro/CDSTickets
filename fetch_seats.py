@@ -184,6 +184,7 @@ def fetch_event_shows(opener, event_id):
 
 def main():
     opener = build_opener()
+    existing = load_existing()
 
     listing = get(opener, LIST_URL, headers={"User-Agent": "Mozilla/5.0"})
     event_id = extract_event_id(listing)
@@ -209,9 +210,45 @@ def main():
             else:
                 shows.append(override_show)
 
+    # When a date sells out, the booking AJAX stops returning PaidShowSeat, so
+    # seats_sold comes back as None even though every seat is gone. Filling it
+    # with the house capacity keeps the card reading "Sold out" (not "0 sold")
+    # and stops the velocity/daily-sales stats from cratering. House capacity is
+    # read from this scrape's still-selling dates (every performance is the same
+    # size); a date's own last-known capacity wins when we have it, so an
+    # odd-sized night (e.g. PWYC) doesn't inherit the wrong number. These shows
+    # skip the phantom pass below — their capacity already accounts for it.
+    healthy_caps = [
+        s["seats_left"] + s["seats_sold"]
+        for s in shows
+        if s["seats_left"] is not None
+        and s["seats_sold"] is not None
+        and s["seats_left"] > 0
+    ]
+    house_cap = max(healthy_caps) if healthy_caps else None
+
+    prev_cap = {}
+    for old in (existing or {}).get("shows", []):
+        pl, ps = old.get("seats_left"), old.get("seats_sold")
+        if pl is not None and ps is not None and pl > 0:
+            prev_cap[str(old.get("id"))] = prev_cap[old.get("date")] = pl + ps
+
+    carried_forward = set()
+    for show in shows:
+        if show["seats_left"] == 0 and show["seats_sold"] is None:
+            cap = prev_cap.get(str(show["id"])) or prev_cap.get(show["date"]) or house_cap
+            if cap is not None:
+                show["seats_sold"] = cap
+                carried_forward.add(show["id"])
+                print(
+                    f"Sold out {show['date']} (id={show['id']}): set "
+                    f"sold={cap} (full house)",
+                    file=sys.stderr,
+                )
+
     for show in shows:
         adj = PHANTOM_ADJUSTMENTS.get(show["date"])
-        if not adj:
+        if not adj or show["id"] in carried_forward:
             continue
         show["seats_left"] = (show["seats_left"] or 0) + adj["left"]
         show["seats_sold"] = (show["seats_sold"] or 0) + adj["sold"]
@@ -224,7 +261,6 @@ def main():
     # Once a performance's ticket sales close, it drops out of the booking
     # dropdown and stops being scraped. Keep the last-known data for any date
     # we previously had so closed/past shows stay on the dashboard.
-    existing = load_existing()
     if existing:
         scraped_dates = {s["date"] for s in shows}
         for old in existing.get("shows", []):
