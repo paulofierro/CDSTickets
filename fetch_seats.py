@@ -19,10 +19,12 @@ CATEGORY = "2"
 OVERRIDE_EVENT_IDS = [451]
 
 # Phantom seats added on top of the scraped numbers, by date. Used to account
-# for bookings the current booking page no longer exposes — e.g. June 11 has
-# 6 legacy paid bookings on event 442 that PWYC's counter doesn't include.
+# for bookings the current booking page no longer exposes. June 11 is the PWYC
+# night, sold through a separate 120-seat listing (event 451); its +10 covers
+# 6 legacy paid bookings on event 442 plus 4 house seats held off the PWYC
+# allocation, both counted as sold so the night reflects the full 130-seat house.
 PHANTOM_ADJUSTMENTS = {
-    "11 Jun, 2026": {"left": 0, "sold": 6},
+    "11 Jun, 2026": {"left": 0, "sold": 10},
 }
 
 
