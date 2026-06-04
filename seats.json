@@ -41,7 +41,8 @@
       "date": "04 Jun, 2026",
       "time": "7:30 PM - 10:00 PM",
       "seats_left": 33,
-      "seats_sold": 97
+      "seats_sold": 97,
+      "closed": true
     },
     {
       "id": 1795,
@@ -68,15 +69,15 @@
       "id": 1805,
       "date": "11 Jun, 2026",
       "time": "7:30 PM - 10:00 PM",
-      "seats_left": 8,
-      "seats_sold": 122
+      "seats_left": 6,
+      "seats_sold": 124
     },
     {
       "id": 1799,
       "date": "12 Jun, 2026",
       "time": "7:30 PM - 10:00 PM",
-      "seats_left": 56,
-      "seats_sold": 74
+      "seats_left": 55,
+      "seats_sold": 75
     },
     {
       "id": 1800,
