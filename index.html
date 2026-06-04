@@ -572,11 +572,11 @@
   document.getElementById('stats').innerHTML = `
     <div class="stat">
       <div class="stat-value">${fmtNum(totalLeft)} <span class="of">/ ${fmtNum(totalCap)}</span></div>
-      <div class="stat-label">Seats remaining</div>
+      <div class="stat-label">${totalLeft === 1 ? 'Seat' : 'Seats'} remaining</div>
     </div>
     <div class="stat">
       <div class="stat-value">${fmtNum(totalSold)}</div>
-      <div class="stat-label">Tickets sold</div>
+      <div class="stat-label">${totalSold === 1 ? 'Ticket' : 'Tickets'} sold</div>
     </div>
     <div class="stat">
       <div class="stat-value">${pctSold}%</div>
@@ -630,7 +630,7 @@
             <div class="show-time">${show.time || ''}</div>
             <div class="availability">
               <span class="seats-left">${fmtNum(left)}</span>
-              <span class="seats-label">seats left</span>
+              <span class="seats-label">${left === 1 ? 'seat' : 'seats'} left</span>
             </div>
             <div class="bar"><div class="bar-fill ${isPast ? 'done' : cls}" style="width:${pct}%"></div></div>
             <div class="meta">
