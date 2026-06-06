@@ -3,6 +3,8 @@
 import json
 import re
 import sys
+import time
+import urllib.error
 import urllib.parse
 import urllib.request
 from http.cookiejar import CookieJar
@@ -33,6 +35,14 @@ MONTHS = {
     "Jul": 7, "Aug": 8, "Sep": 9, "Oct": 10, "Nov": 11, "Dec": 12,
 }
 
+# The ticketing site occasionally times out or returns a 5xx from CI runners.
+# Each request gets an explicit timeout (so a stall fails fast instead of
+# hanging until the OS gives up ~2 min later) and a few retries with
+# exponential backoff.
+TIMEOUT = 30        # seconds per request attempt
+MAX_ATTEMPTS = 4    # total tries before giving up
+BACKOFF_BASE = 2    # seconds; doubles each retry (2s, 4s, 8s)
+
 
 def load_existing(path="seats.json"):
     """Return the previously written payload, or None if absent/unreadable."""
@@ -56,16 +66,39 @@ def build_opener():
     return urllib.request.build_opener(urllib.request.HTTPCookieProcessor(cj))
 
 
+def _open_with_retry(opener, req):
+    """Open a request, retrying transient timeouts and 5xx with backoff."""
+    for attempt in range(1, MAX_ATTEMPTS + 1):
+        try:
+            return opener.open(req, timeout=TIMEOUT)
+        except urllib.error.HTTPError as e:
+            # 4xx responses won't fix themselves; only retry server errors.
+            if e.code < 500 or attempt == MAX_ATTEMPTS:
+                raise
+            err = e
+        except (urllib.error.URLError, TimeoutError) as e:
+            if attempt == MAX_ATTEMPTS:
+                raise
+            err = e
+        wait = BACKOFF_BASE * (2 ** (attempt - 1))
+        print(
+            f"Request to {req.full_url} failed ({err}); "
+            f"attempt {attempt}/{MAX_ATTEMPTS}, retrying in {wait}s",
+            file=sys.stderr,
+        )
+        time.sleep(wait)
+
+
 def get(opener, url, headers=None):
     req = urllib.request.Request(url, headers=headers or {})
-    with opener.open(req) as r:
+    with _open_with_retry(opener, req) as r:
         return r.read().decode("utf-8", errors="replace")
 
 
 def post(opener, url, data, headers=None):
     body = urllib.parse.urlencode(data).encode()
     req = urllib.request.Request(url, data=body, headers=headers or {})
-    with opener.open(req) as r:
+    with _open_with_retry(opener, req) as r:
         return r.read().decode("utf-8", errors="replace")
 
 
