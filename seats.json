@@ -79,15 +79,15 @@
       "id": 1799,
       "date": "12 Jun, 2026",
       "time": "7:30 PM - 10:00 PM",
-      "seats_left": 23,
-      "seats_sold": 107
+      "seats_left": 22,
+      "seats_sold": 108
     },
     {
       "id": 1800,
       "date": "13 Jun, 2026",
       "time": "7:30 PM - 10:00 PM",
-      "seats_left": 7,
-      "seats_sold": 123
+      "seats_left": 2,
+      "seats_sold": 128
     },
     {
       "id": 1801,
