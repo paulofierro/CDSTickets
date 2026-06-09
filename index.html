@@ -628,7 +628,7 @@
     }
 
     return `
-      <article class="show${isPast ? ' past' : ''}" data-show-id="${show.id}" tabindex="0" role="button" aria-pressed="false" aria-label="${day} ${dateLabel} — show daily sales">
+      <article class="show${isPast ? ' past' : ''}" data-show-id="${show.id}" data-aka="${(show.aka || []).join(',')}" tabindex="0" role="button" aria-pressed="false" aria-label="${day} ${dateLabel} — show daily sales">
         <div class="card-inner">
           <div class="card-front">
             <div class="show-header">
@@ -690,18 +690,26 @@
     return out;
   }
 
-  // Same idea as dailySales, but tracking a single show by id. The history
-  // bucket key is a string, so coerce.
-  function showDailySales(showId, snapshots) {
+  // Same idea as dailySales, but tracking a single show. A show can change id
+  // mid-run (e.g. the PWYC night, sold via a separate listing under id 1805,
+  // then handed off to its main-event id 1798 once that listing closed). The
+  // show's `aka` lists those prior ids so its full sales curve is stitched back
+  // together — for each snapshot we take the current id's value, falling back
+  // to a prior id when the current one isn't present yet. The keys cleanly hand
+  // off (never both at once), so the coalesce yields one continuous series.
+  function showDailySales(showId, aka, snapshots) {
     if (!snapshots || !snapshots.length) return [];
-    const key = String(showId);
+    const keys = [String(showId), ...(aka || []).map(String)];
     const dayFmt = new Intl.DateTimeFormat('en-CA', {
       timeZone: 'America/Cayman',
       year: 'numeric', month: '2-digit', day: '2-digit',
     });
     const byDay = new Map();
     for (const snap of snapshots) {
-      const sold = snap.sold?.[key];
+      let sold = null;
+      for (const k of keys) {
+        if (snap.sold?.[k] != null) { sold = snap.sold[k]; break; }
+      }
       if (sold == null) continue;
       const ts = Date.parse(snap.t);
       if (Number.isNaN(ts)) continue;
@@ -904,7 +912,8 @@
   // visibly reshuffles.
   for (const slot of weeksEl.querySelectorAll('.back-chart[data-chart-pending]')) {
     const card = slot.closest('.show');
-    const pts = showDailySales(card.dataset.showId, history.snapshots);
+    const aka = (card.dataset.aka || '').split(',').filter(Boolean);
+    const pts = showDailySales(card.dataset.showId, aka, history.snapshots);
     slot.innerHTML = pts.length
       ? renderChart(pts, miniChartOpts)
       : '<div class="back-empty">Not enough history yet.</div>';

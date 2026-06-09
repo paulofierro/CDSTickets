@@ -319,6 +319,26 @@ def main():
                 old["closed"] = True
                 shows.append(old)
 
+    # A performance can change id between runs — e.g. the PWYC night is sold
+    # through a separate listing (event 451, with its own date id) and reverts
+    # to its main-event id once that listing closes. history.json records sold
+    # counts per id, so a switch would split the show's sales curve in two.
+    # Carry each date's prior ids forward as `aka` so the dashboard can stitch
+    # the full history back into one chart.
+    prev_by_date = {}
+    for old in (existing or {}).get("shows", []):
+        prev_by_date.setdefault(old.get("date"), old)
+    for show in shows:
+        aka = {int(a) for a in show.get("aka", [])}
+        old = prev_by_date.get(show["date"])
+        if old:
+            aka.update(int(a) for a in old.get("aka", []))
+            if old.get("id") is not None and int(old["id"]) != int(show["id"]):
+                aka.add(int(old["id"]))
+        aka.discard(int(show["id"]))
+        if aka:
+            show["aka"] = sorted(aka)
+
     shows.sort(key=show_sort_key)
 
     payload = {
