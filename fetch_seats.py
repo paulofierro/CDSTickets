@@ -253,6 +253,15 @@ def main():
     # size); a date's own last-known capacity wins when we have it, so an
     # odd-sized night (e.g. PWYC) doesn't inherit the wrong number. These shows
     # skip the phantom pass below — their capacity already accounts for it.
+    prev_cap = {}
+    prev_known_sold = []
+    for old in (existing or {}).get("shows", []):
+        pl, ps = old.get("seats_left"), old.get("seats_sold")
+        if ps is not None:
+            prev_known_sold.append(ps)
+        if pl is not None and ps is not None and pl > 0:
+            prev_cap[str(old.get("id"))] = prev_cap[old.get("date")] = pl + ps
+
     healthy_caps = [
         s["seats_left"] + s["seats_sold"]
         for s in shows
@@ -261,12 +270,14 @@ def main():
         and s["seats_left"] > 0
     ]
     house_cap = max(healthy_caps) if healthy_caps else None
-
-    prev_cap = {}
-    for old in (existing or {}).get("shows", []):
-        pl, ps = old.get("seats_left"), old.get("seats_sold")
-        if pl is not None and ps is not None and pl > 0:
-            prev_cap[str(old.get("id"))] = prev_cap[old.get("date")] = pl + ps
+    # When every performance is sold out, no live date has seats_left > 0, so
+    # this scrape reveals no house size and house_cap would be None — leaving
+    # the carry-forward below unable to backfill sold-out shows (sold reads as
+    # 0/None and the stats crater). Fall back to the largest house we've ever
+    # recorded so a fully sold-out run still fills in the full house.
+    if house_cap is None:
+        fallbacks = list(prev_cap.values()) + prev_known_sold
+        house_cap = max(fallbacks) if fallbacks else None
 
     carried_forward = set()
     for show in shows:
