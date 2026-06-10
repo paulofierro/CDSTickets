@@ -4,7 +4,7 @@ on:
   schedule:
     # Times are UTC (GitHub Actions has no timezone support). These map to
     # 6am, 9am, 12pm, 3pm, 6pm, 9pm at UTC-5.
-    - cron: "0 2,11,14,17,20,23 * * *"
+    #- cron: "0 2,11,14,17,20,23 * * *"
   workflow_dispatch:
 
 permissions:
