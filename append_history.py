@@ -43,7 +43,15 @@ def append(slug):
     else:
         history = {"snapshots": []}
 
-    history.setdefault("snapshots", []).append(snapshot_for(seats))
+    snapshots = history.setdefault("snapshots", [])
+    snapshot = snapshot_for(seats)
+    # A snapshot identical to the last one adds nothing (the chart and
+    # velocity stats only look at changes) and would commit a no-op, which
+    # happens whenever the ticket site has the listing offline.
+    if snapshots and snapshots[-1].get("sold") == snapshot["sold"]:
+        print(f"{slug}: unchanged since last snapshot, skipping", file=sys.stderr)
+        return
+    snapshots.append(snapshot)
 
     with open(history_file, "w") as f:
         json.dump(history, f, indent=2)

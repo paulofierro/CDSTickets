@@ -5,6 +5,7 @@ import os
 import re
 import sys
 import time
+from datetime import datetime, timedelta, timezone
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -212,6 +213,10 @@ def extract_events(html):
     """
     events = []
     blocks = re.split(r'<div class="news_post">', html)[1:]
+    if not blocks:
+        # Markup differs from what we expect; fall back to slicing the page
+        # at each booking form so we still find every EventId.
+        blocks = re.split(r'(?=<form[^>]+name="frmEvent-\d+")', html)[1:]
     for block in blocks:
         m = re.search(r'name="EventId"\s+value="(\d+)"', block)
         if not m:
@@ -232,8 +237,29 @@ def extract_events(html):
             "slug": slugify(path.rsplit("/", 1)[-1] if path else title),
         })
     if not events:
+        describe_page(html)
+        # The site shows this between runs, and sometimes pulls a listing
+        # mid-run (seen on show day). That's not a scraper failure: return
+        # nothing and let main() leave the data as it is.
+        if re.search(r"Currently no events are available", html, re.IGNORECASE):
+            print("Listing page reports no events available", file=sys.stderr)
+            return []
         raise RuntimeError("No events found on listing page")
     return events
+
+
+def describe_page(html):
+    """Log what the listing page looked like so a runner failure is debuggable."""
+    title = re.search(r"<title>(.*?)</title>", html, re.IGNORECASE | re.DOTALL)
+    text = re.sub(r"<script.*?</script>|<style.*?</style>", " ", html, flags=re.DOTALL | re.IGNORECASE)
+    text = re.sub(r"<[^>]+>", " ", text)
+    text = re.sub(r"\s+", " ", text).strip()
+    print(
+        f"Listing page: {len(html)} bytes, title={title.group(1).strip() if title else None!r}, "
+        f"news_post={html.count('news_post')}, EventId={html.count('name=\"EventId\"')}",
+        file=sys.stderr,
+    )
+    print(f"Listing text: {text[:600]!r}", file=sys.stderr)
 
 
 def extract_dates(booking_html):
@@ -489,6 +515,15 @@ def all_show_slugs():
     )
 
 
+def is_past(date_label):
+    """True when a "25 Oct, 2026" label is before today in Cayman time (UTC-5)."""
+    key = show_sort_key({"date": date_label})
+    if key == (9999, 99, 99):
+        return False
+    today = datetime.now(timezone(timedelta(hours=-5))).date()
+    return key < (today.year, today.month, today.day)
+
+
 def build_index():
     """Derive shows.json from every shows/<slug>/seats.json on disk."""
     entries = []
@@ -524,6 +559,7 @@ def main():
     listing = get(opener, LIST_URL, headers={"User-Agent": "Mozilla/5.0"})
     events = extract_events(listing)
     print(f"Listing has {len(events)} event(s)", file=sys.stderr)
+    listing_empty = not events
 
     # A folder is keyed by slug, but the ticket site's URL slug could change
     # between runs; if an existing folder already holds this event id, keep
@@ -546,15 +582,23 @@ def main():
 
     # Anything we have on disk but the listing no longer offers has finished
     # selling; mark it closed so it stops being appended to and reads right.
+    # When the whole listing is empty the site may just have the show offline
+    # for a while, so only close a run whose final performance has passed.
     for slug in all_show_slugs():
         if slug in scraped_slugs:
             continue
         path = seats_path(slug)
         data = load_json(path)
-        if data and data.get("event", {}).get("status") != "closed":
-            data.setdefault("event", {})["status"] = "closed"
-            print(f"Marking {slug} closed (no longer listed)", file=sys.stderr)
-            write_json(path, data)
+        if not data or data.get("event", {}).get("status") == "closed":
+            continue
+        dates = [s.get("date", "") for s in data.get("shows", [])]
+        last = max(dates, key=lambda d: show_sort_key({"date": d}), default="")
+        if listing_empty and not is_past(last):
+            print(f"{slug}: not listed right now but still running (last date {last}); leaving as is", file=sys.stderr)
+            continue
+        data.setdefault("event", {})["status"] = "closed"
+        print(f"Marking {slug} closed (no longer listed)", file=sys.stderr)
+        write_json(path, data)
 
     build_index()
 
