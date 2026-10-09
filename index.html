@@ -543,6 +543,7 @@
   .show-card .dates { color: var(--muted); font-size: 0.9rem; }
   .show-card .bar { margin-top: auto; }
   .list-empty { color: var(--muted); }
+  #ts.spaced { display: block; margin-top: 1.5em; }
   footer .logo {
     display: inline-block;
     width: 100px;
@@ -625,11 +626,12 @@
 
   // Every show lives in shows/<slug>/; shows.json indexes them. The landing
   // view lists shows, and ?show=<slug> opens the sales dashboard for one.
-  let index = { shows: [] };
+  let index = { shows: [] }, indexModified = null;
   try {
     const iresp = await fetch('shows.json', { cache: 'no-store' });
     if (!iresp.ok) throw new Error(`HTTP ${iresp.status}`);
     index = await iresp.json();
+    indexModified = iresp.headers.get('Last-Modified');
   } catch (e) {
     showError('Cannot load data', 'shows.json', e);
     return;
@@ -638,6 +640,64 @@
   const requestedSlug = new URLSearchParams(location.search).get('show');
   const slug = /^[a-z0-9-]+$/.test(requestedSlug || '') ? requestedSlug : null;
   const entry = slug ? index.shows.find(s => s.slug === slug) : null;
+
+  // The GitHub Action scrapes at these hours, Cayman time (UTC-5, no DST).
+  // Keep in step with the cron in .github/workflows/update-seats.yml.
+  const UPDATE_HOURS = [6, 9, 12, 15, 18, 21];
+  const CAYMAN_OFFSET_H = 5;
+
+  function describeUpdated(lastModified) {
+    const d = new Date(lastModified);
+    if (Number.isNaN(d.getTime())) return null;
+    const parts = Object.fromEntries(
+      new Intl.DateTimeFormat('en-US', {
+        month: 'long', day: 'numeric', year: 'numeric',
+        hour: '2-digit', minute: '2-digit', hour12: false,
+        timeZone: 'America/Cayman',
+      }).formatToParts(d).map(p => [p.type, p.value])
+    );
+    const absolute = `${parts.month} ${parts.day}, ${parts.year} ${parts.hour}:${parts.minute} GMT-5`;
+    const rtf = new Intl.RelativeTimeFormat('en', { numeric: 'always' });
+    const sec = Math.round((Date.now() - d.getTime()) / 1000);
+    let relative;
+    if (sec < 10) relative = 'just now';
+    else if (sec < 60) relative = rtf.format(-sec, 'second');
+    else {
+      const min = Math.round(sec / 60);
+      if (min < 60) relative = rtf.format(-min, 'minute');
+      else {
+        const hr = Math.round(min / 60);
+        if (hr < 24) relative = rtf.format(-hr, 'hour');
+        else {
+          const day = Math.round(hr / 24);
+          if (day < 30) relative = rtf.format(-day, 'day');
+          else {
+            const mon = Math.round(day / 30);
+            relative = mon < 12 ? rtf.format(-mon, 'month') : rtf.format(-Math.round(mon / 12), 'year');
+          }
+        }
+      }
+    }
+    return { relative, absolute };
+  }
+
+  function describeNextUpdate(now = new Date()) {
+    // Work in Cayman wall-clock time by shifting the UTC clock.
+    const local = new Date(now.getTime() - CAYMAN_OFFSET_H * 3600 * 1000);
+    const h = local.getUTCHours(), m = local.getUTCMinutes();
+    let nextHour = UPDATE_HOURS.find(x => x > h || (x === h && m === 0));
+    let dayLabel = 'today';
+    if (nextHour === undefined) { nextHour = UPDATE_HOURS[0]; dayLabel = 'tomorrow'; }
+    const next = new Date(Date.UTC(
+      local.getUTCFullYear(), local.getUTCMonth(),
+      local.getUTCDate() + (dayLabel === 'tomorrow' ? 1 : 0),
+      nextHour + CAYMAN_OFFSET_H,
+    ));
+    const time = new Intl.DateTimeFormat('en-US', {
+      hour: 'numeric', minute: '2-digit', timeZone: 'America/Cayman',
+    }).format(next);
+    return { when: `${dayLabel} around ${time}`, absolute: next };
+  }
 
   // Status badge for a show as a whole: the scraper marks a run closed once
   // it leaves the booking listing and sold out when no date has seats left;
@@ -657,6 +717,14 @@
     const shows = index.shows || [];
     $('title').textContent = 'Ticket Sales';
     $('subtitle').textContent = 'A prototype sales tracker built for the curious.';
+    const updated = indexModified ? describeUpdated(indexModified) : null;
+    const next = describeNextUpdate();
+    $('ts').textContent = [
+      updated ? `Last updated ${updated.relative}` : null,
+      `Next update ${next.when}`,
+    ].filter(Boolean).join(' · ');
+    $('ts').title = updated ? `${updated.absolute}` : '';
+    $('ts').classList.add('spaced');
     document.title = 'CDS Tickets';
     const listEl = $('show-list');
     listEl.hidden = false;
@@ -1223,33 +1291,10 @@
   });
   document.addEventListener('scroll', hideTooltip, true);
 
-  if (lastModified) {
-    const d = new Date(lastModified);
-    const parts = Object.fromEntries(
-      new Intl.DateTimeFormat('en-US', {
-        month: 'long', day: 'numeric', year: 'numeric',
-        hour: '2-digit', minute: '2-digit', hour12: false,
-        timeZone: 'America/Cayman',
-      }).formatToParts(d).map(p => [p.type, p.value])
-    );
-    const absolute = `${parts.month} ${parts.day}, ${parts.year} ${parts.hour}:${parts.minute} GMT-5`;
-    const rtf = new Intl.RelativeTimeFormat('en', { numeric: 'always' });
-    const relative = (() => {
-      const sec = Math.round((Date.now() - d.getTime()) / 1000);
-      if (sec < 10) return 'just now';
-      if (sec < 60) return rtf.format(-sec, 'second');
-      const min = Math.round(sec / 60);
-      if (min < 60) return rtf.format(-min, 'minute');
-      const hr = Math.round(min / 60);
-      if (hr < 24) return rtf.format(-hr, 'hour');
-      const day = Math.round(hr / 24);
-      if (day < 30) return rtf.format(-day, 'day');
-      const mon = Math.round(day / 30);
-      if (mon < 12) return rtf.format(-mon, 'month');
-      return rtf.format(-Math.round(mon / 12), 'year');
-    })();
-    document.getElementById('ts').textContent = `Last updated: ${relative}`;
-    document.getElementById('ts').title = `${absolute}`;
+  const updated = lastModified ? describeUpdated(lastModified) : null;
+  if (updated) {
+    $('ts').textContent = `Last updated: ${updated.relative}`;
+    $('ts').title = `${updated.absolute}`;
   }
 })();
 </script>
