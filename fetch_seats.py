@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Scrape per-show-date seat availability for the active CDS show."""
 import json
+import os
 import re
 import sys
 import time
@@ -15,18 +16,57 @@ BOOKING_URL = f"{BASE}/booking"
 SEATS_URL = f"{BASE}/GetNoOfTickets"
 CATEGORY = "2"
 
-# Extra events whose dates should be merged into the main event's show list,
-# overriding any matching date. Used when a single performance gets moved to
-# a separate listing (e.g. the June 11 Pay-as-you-Can night for In The Heights).
-OVERRIDE_EVENT_IDS = [451]
+# Every show lives in its own folder: shows/<slug>/seats.json and
+# shows/<slug>/history.json. shows.json at the repo root is an index derived
+# from those folders so the dashboard can list shows with one request.
+SHOWS_DIR = "shows"
+INDEX_FILE = "shows.json"
 
-# Phantom seats added on top of the scraped numbers, by date. Used to account
-# for bookings the current booking page no longer exposes. June 11 is the PWYC
-# night, sold through a separate 120-seat listing (event 451); its +10 covers
-# 6 legacy paid bookings on event 442 plus 4 house seats held off the PWYC
-# allocation, both counted as sold so the night reflects the full 130-seat house.
+# Each show's artwork is kept in its folder as poster.<ext> (poster.jpg by
+# default) so it survives the ticket site dropping the listing. The scraper
+# downloads it once; a file already in the folder is never overwritten, so a
+# hand-picked poster can simply be dropped in.
+POSTER_BASENAME = "poster"
+POSTER_EXTS = ("jpg", "jpeg", "png", "webp", "gif")
+
+# Extra events whose dates should be merged into a main event's show list,
+# overriding any matching date, keyed by the main event's id. Used when a
+# single performance gets moved to a separate listing (e.g. the June 11
+# Pay-as-you-Can night for In The Heights, event 442, sold via event 451).
+OVERRIDE_EVENT_IDS = {
+    442: [451],
+}
+
+# Phantom seats added on top of the scraped numbers, keyed by main event id and
+# then by date. Used to account for bookings the current booking page no longer
+# exposes. June 11 is the PWYC night, sold through a separate 120-seat listing
+# (event 451); its +10 covers 6 legacy paid bookings on event 442 plus 4 house
+# seats held off the PWYC allocation, both counted as sold so the night reflects
+# the full 130-seat house.
 PHANTOM_ADJUSTMENTS = {
-    "11 Jun, 2026": {"left": 0, "sold": 10},
+    442: {
+        "11 Jun, 2026": {"left": 0, "sold": 10},
+    },
+}
+
+# Performances the booking page no longer offers and that were never scraped
+# while they were on sale, keyed by main event id. A past date drops out of
+# the dropdown, so a run whose tracking started after opening night is missing
+# its first performances. Entries here are merged in as closed shows whenever
+# the scrape doesn't already return that date. Mockingbird opened Thursday
+# 8 Oct 2026, the day before tracking began, and sold 40 of its 130 seats;
+# its id fits the 1964–1974 run. The same 40 is baked into that show's
+# history.json so the daily chart and the card agree.
+MANUAL_SHOWS = {
+    464: [
+        {
+            "id": 1963,
+            "date": "08 Oct, 2026",
+            "time": "7:30 PM - 10:00 PM",
+            "seats_left": 90,
+            "seats_sold": 40,
+        },
+    ],
 }
 
 
@@ -44,13 +84,63 @@ MAX_ATTEMPTS = 4    # total tries before giving up
 BACKOFF_BASE = 2    # seconds; doubles each retry (2s, 4s, 8s)
 
 
-def load_existing(path="seats.json"):
-    """Return the previously written payload, or None if absent/unreadable."""
+def load_json(path):
+    """Return the parsed JSON at path, or None if absent/unreadable."""
     try:
         with open(path) as f:
             return json.load(f)
     except (FileNotFoundError, json.JSONDecodeError):
         return None
+
+
+def show_dir(slug):
+    return os.path.join(SHOWS_DIR, slug)
+
+
+def seats_path(slug):
+    return os.path.join(show_dir(slug), "seats.json")
+
+
+def find_poster(slug):
+    """Return the relative path of this show's local poster, or None."""
+    for ext in POSTER_EXTS:
+        path = os.path.join(show_dir(slug), f"{POSTER_BASENAME}.{ext}")
+        if os.path.isfile(path):
+            return path
+    return None
+
+
+def poster_name(slug):
+    """Poster filename relative to the show folder; poster.jpg by default.
+
+    seats.json always points at the folder's own poster so the artwork can be
+    dropped in later without touching the data. shows.json resolves it from
+    the repo root for the dashboard.
+    """
+    found = find_poster(slug)
+    return os.path.basename(found) if found else f"{POSTER_BASENAME}.jpg"
+
+
+def download_poster(opener, slug, url):
+    """Save the listing's poster into the show folder if none is there yet."""
+    if not url or find_poster(slug):
+        return find_poster(slug)
+    ext = os.path.splitext(urllib.parse.urlparse(url).path)[1].lstrip(".").lower()
+    if ext not in POSTER_EXTS:
+        ext = "jpg"
+    path = os.path.join(show_dir(slug), f"{POSTER_BASENAME}.{ext}")
+    try:
+        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+        with _open_with_retry(opener, req) as r:
+            data = r.read()
+    except (urllib.error.URLError, TimeoutError) as e:
+        print(f"Poster download failed for {slug}: {e}", file=sys.stderr)
+        return None
+    os.makedirs(show_dir(slug), exist_ok=True)
+    with open(path, "wb") as f:
+        f.write(data)
+    print(f"Saved poster {path} ({len(data)} bytes)", file=sys.stderr)
+    return path
 
 
 def show_sort_key(show):
@@ -109,18 +199,41 @@ def extract_csrf(html):
     return m.group(1)
 
 
-def extract_event_id(html):
-    # Look for the booking form's EventId hidden input
-    m = re.search(r'name="EventId"\s+value="(\d+)"', html)
-    if not m:
-        raise RuntimeError("EventId not found on listing page")
-    return m.group(1)
+def slugify(text):
+    slug = re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-")
+    return slug or "show"
 
 
-def extract_event_title(html, event_id):
-    # Find the title near the form for this EventId
-    m = re.search(r'title="([^"]+)"\s+href="[^"]+"\s+class="link">[^<]+</a></h4>', html)
-    return m.group(1) if m else None
+def extract_events(html):
+    """Return one dict per event listed on the category page.
+
+    Each listing is a <div class="news_post"> block holding the title link,
+    poster image, start/end dates and a booking form with the EventId.
+    """
+    events = []
+    blocks = re.split(r'<div class="news_post">', html)[1:]
+    for block in blocks:
+        m = re.search(r'name="EventId"\s+value="(\d+)"', block)
+        if not m:
+            continue
+        event_id = int(m.group(1))
+        title_m = re.search(
+            r'<h4><a title="([^"]+)"\s+href="([^"]+)"\s+class="link">', block
+        )
+        title = title_m.group(1).strip() if title_m else f"Event {event_id}"
+        url = title_m.group(2).strip() if title_m else LIST_URL
+        img_m = re.search(r'<img[^>]+src="([^"]+)"', block)
+        path = urllib.parse.urlparse(url).path.strip("/")
+        events.append({
+            "id": event_id,
+            "title": title,
+            "url": url,
+            "image": img_m.group(1) if img_m else None,
+            "slug": slugify(path.rsplit("/", 1)[-1] if path else title),
+        })
+    if not events:
+        raise RuntimeError("No events found on listing page")
+    return events
 
 
 def extract_dates(booking_html):
@@ -217,19 +330,15 @@ def fetch_event_shows(opener, event_id):
     return shows
 
 
-def main():
-    opener = build_opener()
-    existing = load_existing()
-
-    listing = get(opener, LIST_URL, headers={"User-Agent": "Mozilla/5.0"})
-    event_id = extract_event_id(listing)
-    title = extract_event_title(listing, event_id)
-    print(f"Event: {title} (id={event_id})", file=sys.stderr)
+def scrape_event(opener, event, existing):
+    """Scrape one listed event and return its seats.json payload."""
+    event_id = event["id"]
+    print(f"Event: {event['title']} (id={event_id}, slug={event['slug']})", file=sys.stderr)
 
     shows = fetch_event_shows(opener, event_id)
     print(f"Found {len(shows)} dates on main event", file=sys.stderr)
 
-    for override_id in OVERRIDE_EVENT_IDS:
+    for override_id in OVERRIDE_EVENT_IDS.get(event_id, []):
         print(f"Override event: id={override_id}", file=sys.stderr)
         for override_show in fetch_event_shows(opener, override_id):
             idx = next(
@@ -244,6 +353,13 @@ def main():
                 shows[idx] = override_show
             else:
                 shows.append(override_show)
+
+    scraped_dates = {s["date"] for s in shows}
+    for manual in MANUAL_SHOWS.get(event_id, []):
+        if manual["date"] in scraped_dates:
+            continue
+        print(f"Manual show {manual['date']} (id={manual['id']}): not on booking page, adding as closed", file=sys.stderr)
+        shows.append({**manual, "closed": True})
 
     # When a date sells out, the booking AJAX stops returning PaidShowSeat, so
     # seats_sold comes back as None even though every seat is gone. Filling it
@@ -292,8 +408,9 @@ def main():
                     file=sys.stderr,
                 )
 
+    phantoms = PHANTOM_ADJUSTMENTS.get(event_id, {})
     for show in shows:
-        adj = PHANTOM_ADJUSTMENTS.get(show["date"])
+        adj = phantoms.get(show["date"])
         if not adj or show["id"] in carried_forward:
             continue
         show["seats_left"] = (show["seats_left"] or 0) + adj["left"]
@@ -341,13 +458,107 @@ def main():
 
     shows.sort(key=show_sort_key)
 
-    payload = {
-        "event": {"id": int(event_id), "title": title},
+    sold_out = bool(shows) and all(s["seats_left"] == 0 for s in shows)
+    return {
+        "event": {
+            "id": event_id,
+            "title": event["title"],
+            "slug": event["slug"],
+            "url": event["url"],
+            "image": poster_name(event["slug"]),
+            "image_url": event.get("image"),
+            "status": "sold_out" if sold_out else "on_sale",
+        },
         "shows": shows,
     }
-    with open("seats.json", "w") as f:
+
+
+def write_json(path, payload):
+    os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
+    with open(path, "w") as f:
         json.dump(payload, f, indent=2)
-    print("Wrote seats.json", file=sys.stderr)
+    print(f"Wrote {path}", file=sys.stderr)
+
+
+def all_show_slugs():
+    if not os.path.isdir(SHOWS_DIR):
+        return []
+    return sorted(
+        d for d in os.listdir(SHOWS_DIR)
+        if os.path.isfile(seats_path(d))
+    )
+
+
+def build_index():
+    """Derive shows.json from every shows/<slug>/seats.json on disk."""
+    entries = []
+    for slug in all_show_slugs():
+        data = load_json(seats_path(slug))
+        if not data or "shows" not in data:
+            continue
+        event = data.get("event", {})
+        shows = sorted(data["shows"], key=show_sort_key)
+        left = sum(s.get("seats_left") or 0 for s in shows)
+        sold = sum(s.get("seats_sold") or 0 for s in shows)
+        entries.append({
+            "slug": slug,
+            "title": event.get("title") or slug,
+            "event_id": event.get("id"),
+            "url": event.get("url") or LIST_URL,
+            "image": f"{SHOWS_DIR}/{slug}/{os.path.basename(event.get('image') or poster_name(slug))}",
+            "status": event.get("status") or "closed",
+            "start": shows[0]["date"] if shows else None,
+            "end": shows[-1]["date"] if shows else None,
+            "performances": len(shows),
+            "seats_left": left,
+            "seats_sold": sold,
+        })
+    # Newest run first so the dashboard leads with the current show.
+    entries.sort(key=lambda e: show_sort_key({"date": e["start"] or ""}), reverse=True)
+    write_json(INDEX_FILE, {"shows": entries})
+
+
+def main():
+    opener = build_opener()
+
+    listing = get(opener, LIST_URL, headers={"User-Agent": "Mozilla/5.0"})
+    events = extract_events(listing)
+    print(f"Listing has {len(events)} event(s)", file=sys.stderr)
+
+    # A folder is keyed by slug, but the ticket site's URL slug could change
+    # between runs; if an existing folder already holds this event id, keep
+    # using it so the show's history stays in one place.
+    existing_by_id = {}
+    for slug in all_show_slugs():
+        data = load_json(seats_path(slug))
+        eid = (data or {}).get("event", {}).get("id")
+        if eid is not None:
+            existing_by_id[int(eid)] = slug
+
+    scraped_slugs = set()
+    for event in events:
+        event["slug"] = existing_by_id.get(event["id"], event["slug"])
+        existing = load_json(seats_path(event["slug"]))
+        download_poster(opener, event["slug"], event.get("image"))
+        payload = scrape_event(opener, event, existing)
+        write_json(seats_path(event["slug"]), payload)
+        scraped_slugs.add(event["slug"])
+
+    # Anything we have on disk but the listing no longer offers has finished
+    # selling; mark it closed so it stops being appended to and reads right.
+    for slug in all_show_slugs():
+        if slug in scraped_slugs:
+            continue
+        path = seats_path(slug)
+        data = load_json(path)
+        if data and data.get("event", {}).get("status") != "closed":
+            data.setdefault("event", {})["status"] = "closed"
+            print(f"Marking {slug} closed (no longer listed)", file=sys.stderr)
+            write_json(path, data)
+
+    build_index()
+
+
 
 
 if __name__ == "__main__":

@@ -1,7 +1,11 @@
 {
   "event": {
     "id": 442,
-    "title": "In The Heights"
+    "title": "In The Heights",
+    "slug": "in-the-heights",
+    "url": "https://ticket.cds.ky/event?category=2",
+    "image": "poster.jpg",
+    "status": "closed"
   },
   "shows": [
     {

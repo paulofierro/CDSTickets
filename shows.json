@@ -1,0 +1,30 @@
+{
+  "shows": [
+    {
+      "slug": "to-kill-a-mockingbird",
+      "title": "To Kill A Mockingbird",
+      "event_id": 464,
+      "url": "https://ticket.cds.ky/to-kill-a-mockingbird",
+      "image": "shows/to-kill-a-mockingbird/poster.jpg",
+      "status": "on_sale",
+      "start": "08 Oct, 2026",
+      "end": "25 Oct, 2026",
+      "performances": 12,
+      "seats_left": 997,
+      "seats_sold": 563
+    },
+    {
+      "slug": "in-the-heights",
+      "title": "In The Heights",
+      "event_id": 442,
+      "url": "https://ticket.cds.ky/event?category=2",
+      "image": "shows/in-the-heights/poster.jpg",
+      "status": "closed",
+      "start": "28 May, 2026",
+      "end": "14 Jun, 2026",
+      "performances": 12,
+      "seats_left": 223,
+      "seats_sold": 1337
+    }
+  ]
+}

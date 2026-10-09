@@ -4,7 +4,7 @@ on:
   schedule:
     # Times are UTC (GitHub Actions has no timezone support). These map to
     # 6am, 9am, 12pm, 3pm, 6pm, 9pm at UTC-5.
-    #- cron: "0 2,11,14,17,20,23 * * *"
+    - cron: "0 2,11,14,17,20,23 * * *"
   workflow_dispatch:
 
 permissions:
@@ -28,8 +28,10 @@ jobs:
       - name: Capture previous total
         id: prev
         run: |
-          if [ -f seats.json ]; then
-            prev=$(jq '[.shows[].seats_sold] | add // 0' seats.json)
+          # Total across shows still on sale; closed shows are constant so
+          # they only add noise to the headline number.
+          if ls shows/*/seats.json >/dev/null 2>&1; then
+            prev=$(jq -s '[.[] | select(.event.status != "closed") | .shows[].seats_sold] | add // 0' shows/*/seats.json)
           else
             prev=0
           fi
@@ -44,14 +46,14 @@ jobs:
 
       - name: Commit changes
         run: |
-          if git diff --quiet -- seats.json history.json; then
+          git add shows shows.json
+          if git diff --cached --quiet; then
             echo "No changes"
             exit 0
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add seats.json history.json
-          git commit -m "Update seats.json"
+          git commit -m "Update seat data"
           git push
 
       - name: Notify via Brrr (success)
@@ -61,7 +63,7 @@ jobs:
           NOTIFICATION_KEY: ${{ secrets.NOTIFICATION_KEY }}
           PREV_TOTAL: ${{ steps.prev.outputs.total }}
         run: |
-          new_total=$(jq '[.shows[].seats_sold] | add // 0' seats.json)
+          new_total=$(jq -s '[.[] | select(.event.status != "closed") | .shows[].seats_sold] | add // 0' shows/*/seats.json)
           delta=$(( new_total - PREV_TOTAL ))
           msg="New tickets sold: $delta, Total tickets sold: $new_total"
 

@@ -56,6 +56,8 @@
 
   * { box-sizing: border-box; }
   html, body { margin: 0; padding: 0; }
+  /* Keep the hidden attribute winning over display rules like .stats { display: grid }. */
+  [hidden] { display: none !important; }
 
   body {
     font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", system-ui, sans-serif;
@@ -442,6 +444,105 @@
     opacity: 0.5;
   }
   footer a { color: var(--muted); }
+
+  /* Show list (landing view) and per-show navigation */
+  .visually-hidden {
+    position: absolute; width: 1px; height: 1px; overflow: hidden;
+    clip: rect(0 0 0 0); white-space: nowrap;
+  }
+  .show-nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+  .back-link {
+    color: var(--muted);
+    text-decoration: none;
+    font-size: 0.9rem;
+    font-weight: 500;
+  }
+  .back-link:hover { color: var(--text); }
+  .switcher select {
+    appearance: none;
+    -webkit-appearance: none;
+    background: var(--surface) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M2 4l4 4 4-4' fill='none' stroke='%236b7280' stroke-width='1.5'/%3E%3C/svg%3E") no-repeat right 0.7rem center;
+    color: var(--text);
+    border: 1px solid var(--border-strong);
+    border-radius: 8px;
+    padding: 0.45rem 2rem 0.45rem 0.75rem;
+    font: inherit;
+    font-size: 0.9rem;
+    max-width: 260px;
+    cursor: pointer;
+  }
+  .show-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(280px, 100%), 1fr));
+    gap: 1rem;
+  }
+  .show-card {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    overflow: hidden;
+    color: inherit;
+    text-decoration: none;
+    transition: transform 0.15s, border-color 0.15s, box-shadow 0.15s;
+  }
+  .show-card:hover {
+    transform: translateY(-2px);
+    border-color: var(--border-strong);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.06);
+  }
+  .show-card .poster {
+    aspect-ratio: 3 / 2;
+    background: var(--border);
+  }
+  .show-card .poster { position: relative; }
+  .show-card .poster img {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+  .show-card .poster .placeholder-icon {
+    display: none;
+    position: absolute; inset: 0;
+    align-items: center;
+    justify-content: center;
+    color: var(--muted);
+    font-size: 2.5rem;
+  }
+  .show-card .poster.placeholder .placeholder-icon { display: flex; }
+  .show-card .body {
+    padding: 1rem 1.1rem 1.1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    flex: 1;
+  }
+  .show-card .card-title {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+  .show-card h2 {
+    min-width: 0;
+    overflow-wrap: anywhere;
+    margin: 0;
+    font-size: 1.15rem;
+    letter-spacing: -0.01em;
+    line-height: 1.3;
+  }
+  .show-card .dates { color: var(--muted); font-size: 0.9rem; }
+  .show-card .bar { margin-top: auto; }
+  .list-empty { color: var(--muted); }
   footer .logo {
     display: inline-block;
     width: 100px;
@@ -455,18 +556,26 @@
 <body>
 <div class="container">
   <header>
+    <nav class="show-nav" id="show-nav" hidden>
+      <a class="back-link" href="./">← All shows</a>
+      <label class="switcher">
+        <span class="visually-hidden">Switch show</span>
+        <select id="show-switch" aria-label="Switch show"></select>
+      </label>
+    </nav>
     <p class="eyebrow">Cayman Drama Society</p>
     <h1 id="title">Loading…</h1>
     <p class="subtitle" id="subtitle"></p>
     <span id="ts" class="subtitle" ></span>
-    <div class="header-actions">
-      <a class="btn" href="https://ticket.cds.ky/event?category=2" target="_blank" rel="noopener">Book tickets →</a>
+    <div class="header-actions" id="header-actions" hidden>
+      <a class="btn" id="book-btn" href="https://ticket.cds.ky/event?category=2" target="_blank" rel="noopener">Book tickets →</a>
     </div>
-    <h2 class="stats-label" id="stats-label">Sales Stats</h2>
-    <div class="stats" id="stats"></div>
+    <h2 class="stats-label" id="stats-label" hidden>Sales Stats</h2>
+    <div class="stats" id="stats" hidden></div>
   </header>
 
   <main>
+    <section id="show-list" class="show-list" hidden></section>
     <section id="chart-section" class="chart-card" hidden>
       <h2>Tickets sold per day</h2>
       <div id="chart"></div>
@@ -483,28 +592,7 @@
 <script>
 (async () => {
   const weeksEl = document.getElementById('weeks');
-
-  let data, lastModified, history = { snapshots: [] };
-  try {
-    const resp = await fetch('seats.json', { cache: 'no-store' });
-    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-    data = await resp.json();
-    lastModified = resp.headers.get('Last-Modified');
-    try {
-      const hresp = await fetch('history.json', { cache: 'no-store' });
-      if (hresp.ok) history = await hresp.json();
-    } catch (_) { /* history is optional */ }
-  } catch (e) {
-    document.getElementById('title').textContent = 'Cannot load data';
-    document.getElementById('subtitle').textContent = '';
-    weeksEl.innerHTML = `<div class="error">
-      Couldn't load <code>seats.json</code>: ${e.message}.<br><br>
-      Browsers block <code>fetch()</code> on <code>file://</code>.
-      Serve this folder over HTTP — e.g. run <code>python3 -m http.server</code>
-      in this directory, then open <code>http://localhost:8000/</code>.
-    </div>`;
-    return;
-  }
+  const $ = id => document.getElementById(id);
 
   const monthMap = {Jan:0,Feb:1,Mar:2,Apr:3,May:4,Jun:5,Jul:6,Aug:7,Sep:8,Oct:9,Nov:10,Dec:11};
   const dayNames = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
@@ -513,13 +601,147 @@
   startOfToday.setHours(0, 0, 0, 0);
 
   function parseShowDate(s) {
-    const m = s.match(/(\d+)\s+(\w+),?\s+(\d+)/);
+    const m = (s || '').match(/(\d+)\s+(\w+),?\s+(\d+)/);
     if (!m) return null;
     return new Date(+m[3], monthMap[m[2]], +m[1]);
   }
 
   const fmtShort = d => d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
   const fmtNum = n => n.toLocaleString('en-US');
+  const escapeHtml = s => String(s ?? '').replace(/[&<>"']/g, c => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+  })[c]);
+
+  function showError(title, file, e) {
+    $('title').textContent = title;
+    $('subtitle').textContent = '';
+    weeksEl.innerHTML = `<div class="error">
+      Couldn't load <code>${file}</code>: ${escapeHtml(e.message)}.<br><br>
+      Browsers block <code>fetch()</code> on <code>file://</code>.
+      Serve this folder over HTTP — e.g. run <code>python3 -m http.server</code>
+      in this directory, then open <code>http://localhost:8000/</code>.
+    </div>`;
+  }
+
+  // Every show lives in shows/<slug>/; shows.json indexes them. The landing
+  // view lists shows, and ?show=<slug> opens the sales dashboard for one.
+  let index = { shows: [] };
+  try {
+    const iresp = await fetch('shows.json', { cache: 'no-store' });
+    if (!iresp.ok) throw new Error(`HTTP ${iresp.status}`);
+    index = await iresp.json();
+  } catch (e) {
+    showError('Cannot load data', 'shows.json', e);
+    return;
+  }
+
+  const requestedSlug = new URLSearchParams(location.search).get('show');
+  const slug = /^[a-z0-9-]+$/.test(requestedSlug || '') ? requestedSlug : null;
+  const entry = slug ? index.shows.find(s => s.slug === slug) : null;
+
+  // Status badge for a show as a whole: the scraper marks a run closed once
+  // it leaves the booking listing and sold out when no date has seats left;
+  // a run whose last date has passed reads as done regardless.
+  function showStatus(e) {
+    const end = parseShowDate(e.end);
+    const cap = (e.seats_left ?? 0) + (e.seats_sold ?? 0);
+    const pct = cap ? Math.round(((e.seats_sold ?? 0) / cap) * 100) : 0;
+    if (end && end < startOfToday) return { cls: 'done', label: '✅ Done', pct };
+    if (e.status === 'sold_out') return { cls: 'bad', label: '🥳 Sold out!', pct: 100 };
+    if (e.status === 'closed') return { cls: 'done', label: '🔒 Closed', pct };
+    if (pct >= 75) return { cls: 'warn', label: 'Filling up', pct };
+    return { cls: 'good', label: 'On sale', pct };
+  }
+
+  function renderList() {
+    const shows = index.shows || [];
+    $('title').textContent = 'Ticket Sales';
+    $('subtitle').textContent = 'A prototype sales tracker built for the curious.';
+    document.title = 'CDS Tickets';
+    const listEl = $('show-list');
+    listEl.hidden = false;
+    if (!shows.length) {
+      listEl.innerHTML = '<p class="list-empty">No shows yet.</p>';
+      return;
+    }
+    listEl.innerHTML = shows.map(e => {
+      const start = parseShowDate(e.start), end = parseShowDate(e.end);
+      const range = start && end
+        ? `${fmtShort(start)} – ${fmtShort(end)}, ${end.getFullYear()}`
+        : (e.start || '');
+      const { cls, label, pct } = showStatus(e);
+      const barCls = cls === 'done' ? 'done' : cls;
+      const poster = `<div class="poster${e.image ? '' : ' placeholder'}" aria-hidden="true">${e.image
+        ? `<img src="${escapeHtml(e.image)}" alt="" loading="lazy" onerror="this.parentNode.classList.add('placeholder'); this.remove();">`
+        : ''}<span class="placeholder-icon">🎭</span></div>`;
+      const perf = e.performances === 1 ? '1 performance' : `${e.performances} performances`;
+      return `
+        <a class="show-card" href="?show=${encodeURIComponent(e.slug)}">
+          ${poster}
+          <div class="body">
+            <div class="card-title">
+              <h2>${escapeHtml(e.title)}</h2>
+              <span class="badge ${cls}">${label}</span>
+            </div>
+            <div class="dates">${escapeHtml(range)} · ${perf}</div>
+            <div class="bar"><div class="bar-fill ${barCls}" style="width:${pct}%"></div></div>
+            <div class="meta">
+              <span>${fmtNum(e.seats_sold ?? 0)} sold</span>
+              <span>${pct}% full</span>
+            </div>
+          </div>
+        </a>
+      `;
+    }).join('');
+  }
+
+  if (!slug) {
+    renderList();
+    return;
+  }
+  if (!entry) {
+    $('title').textContent = 'Show not found';
+    $('subtitle').textContent = '';
+    document.title = 'Show not found — CDS Tickets';
+    weeksEl.innerHTML = `<div class="error">No show called <code>${escapeHtml(slug)}</code> is being tracked.</div>
+      <p><a class="back-link" href="./">← All shows</a></p>`;
+    return;
+  }
+
+  // Detail view: load this show's data and reveal the dashboard chrome.
+  const base = `shows/${slug}/`;
+  let data, lastModified, history = { snapshots: [] };
+  try {
+    const resp = await fetch(base + 'seats.json', { cache: 'no-store' });
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    data = await resp.json();
+    lastModified = resp.headers.get('Last-Modified');
+    try {
+      const hresp = await fetch(base + 'history.json', { cache: 'no-store' });
+      if (hresp.ok) history = await hresp.json();
+    } catch (_) { /* history is optional */ }
+  } catch (e) {
+    showError(entry.title, `${base}seats.json`, e);
+    weeksEl.insertAdjacentHTML('beforeend', '<p><a class="back-link" href="./">← All shows</a></p>');
+    return;
+  }
+
+  $('show-nav').hidden = false;
+  $('header-actions').hidden = false;
+  $('stats-label').hidden = false;
+  $('stats').hidden = false;
+
+  const switchEl = $('show-switch');
+  switchEl.innerHTML = (index.shows || []).map(e =>
+    `<option value="${escapeHtml(e.slug)}"${e.slug === slug ? ' selected' : ''}>${escapeHtml(e.title)}</option>`
+  ).join('');
+  switchEl.addEventListener('change', () => {
+    location.href = `?show=${encodeURIComponent(switchEl.value)}`;
+  });
+
+  const bookBtn = $('book-btn');
+  bookBtn.href = data.event.url || entry.url || bookBtn.href;
+  if (data.event.status === 'closed') $('header-actions').hidden = true;
 
   // Aggregates
   const totalLeft = data.shows.reduce((s, x) => s + (x.seats_left ?? 0), 0);
@@ -563,9 +785,10 @@
     ? `${fmtShort(dates[0])} – ${fmtShort(dates[dates.length - 1])}, ${dates[0].getFullYear()}`
     : '';
 
-  document.getElementById('title').textContent = data.event.title || 'Show';
-  document.getElementById('subtitle').textContent = `Prospect Playhouse • ${range} • ${data.shows.length} performances`;
-  document.title = `${data.event.title || 'Show'} — Tickets`;
+  const showTitle = data.event.title || entry.title || 'Show';
+  $('title').textContent = showTitle;
+  $('subtitle').textContent = `Prospect Playhouse • ${range} • ${data.shows.length} performances`;
+  document.title = `${showTitle} — Tickets`;
 
   const fmtDelta = n => n === null ? '—' : (n > 0 ? '+' : '') + fmtNum(n);
 

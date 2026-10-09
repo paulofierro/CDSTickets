@@ -1,0 +1,98 @@
+{
+  "event": {
+    "id": 464,
+    "title": "To Kill A Mockingbird",
+    "slug": "to-kill-a-mockingbird",
+    "url": "https://ticket.cds.ky/to-kill-a-mockingbird",
+    "image": "poster.jpg",
+    "image_url": "https://ticket.cds.ky/cache/Event/600_400/1789060835T91-SM_Graphic.jpg",
+    "status": "on_sale"
+  },
+  "shows": [
+    {
+      "id": 1963,
+      "date": "08 Oct, 2026",
+      "time": "7:30 PM - 10:00 PM",
+      "seats_left": 90,
+      "seats_sold": 40,
+      "closed": true
+    },
+    {
+      "id": 1964,
+      "date": "09 Oct, 2026",
+      "time": "7:30 PM - 10:00 PM",
+      "seats_left": 58,
+      "seats_sold": 72
+    },
+    {
+      "id": 1965,
+      "date": "10 Oct, 2026",
+      "time": "7:30 PM - 10:00 PM",
+      "seats_left": 65,
+      "seats_sold": 65
+    },
+    {
+      "id": 1966,
+      "date": "11 Oct, 2026",
+      "time": "4:00 PM - 6:30 PM",
+      "seats_left": 86,
+      "seats_sold": 44
+    },
+    {
+      "id": 1967,
+      "date": "15 Oct, 2026",
+      "time": "7:30 PM - 10:00 PM",
+      "seats_left": 0,
+      "seats_sold": 130
+    },
+    {
+      "id": 1968,
+      "date": "16 Oct, 2026",
+      "time": "7:30 PM - 10:00 PM",
+      "seats_left": 100,
+      "seats_sold": 30
+    },
+    {
+      "id": 1969,
+      "date": "17 Oct, 2026",
+      "time": "7:30 PM - 10:00 PM",
+      "seats_left": 85,
+      "seats_sold": 45
+    },
+    {
+      "id": 1970,
+      "date": "18 Oct, 2026",
+      "time": "4:00 PM - 6:30 PM",
+      "seats_left": 108,
+      "seats_sold": 22
+    },
+    {
+      "id": 1971,
+      "date": "22 Oct, 2026",
+      "time": "7:30 PM - 10:00 PM",
+      "seats_left": 109,
+      "seats_sold": 21
+    },
+    {
+      "id": 1972,
+      "date": "23 Oct, 2026",
+      "time": "7:30 PM - 10:00 PM",
+      "seats_left": 102,
+      "seats_sold": 28
+    },
+    {
+      "id": 1973,
+      "date": "24 Oct, 2026",
+      "time": "7:30 PM - 10:00 PM",
+      "seats_left": 94,
+      "seats_sold": 36
+    },
+    {
+      "id": 1974,
+      "date": "25 Oct, 2026",
+      "time": "4:00 PM - 6:30 PM",
+      "seats_left": 100,
+      "seats_sold": 30
+    }
+  ]
+}
