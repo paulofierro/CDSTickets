@@ -37,8 +37,8 @@
       "id": 1966,
       "date": "11 Oct, 2026",
       "time": "4:00 PM - 6:30 PM",
-      "seats_left": 74,
-      "seats_sold": 56
+      "seats_left": 73,
+      "seats_sold": 57
     },
     {
       "id": 1967,
@@ -72,8 +72,8 @@
       "id": 1971,
       "date": "22 Oct, 2026",
       "time": "7:30 PM - 10:00 PM",
-      "seats_left": 104,
-      "seats_sold": 26
+      "seats_left": 100,
+      "seats_sold": 30
     },
     {
       "id": 1972,
