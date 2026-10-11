@@ -30,14 +30,15 @@
       "date": "10 Oct, 2026",
       "time": "7:30 PM - 10:00 PM",
       "seats_left": 50,
-      "seats_sold": 80
+      "seats_sold": 80,
+      "closed": true
     },
     {
       "id": 1966,
       "date": "11 Oct, 2026",
       "time": "4:00 PM - 6:30 PM",
-      "seats_left": 78,
-      "seats_sold": 52
+      "seats_left": 74,
+      "seats_sold": 56
     },
     {
       "id": 1967,
