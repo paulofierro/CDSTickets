@@ -53,15 +53,15 @@
       "id": 1968,
       "date": "16 Oct, 2026",
       "time": "7:30 PM - 10:00 PM",
-      "seats_left": 52,
-      "seats_sold": 78
+      "seats_left": 45,
+      "seats_sold": 85
     },
     {
       "id": 1969,
       "date": "17 Oct, 2026",
       "time": "7:30 PM - 10:00 PM",
-      "seats_left": 57,
-      "seats_sold": 73
+      "seats_left": 55,
+      "seats_sold": 75
     },
     {
       "id": 1970,
@@ -88,15 +88,15 @@
       "id": 1973,
       "date": "24 Oct, 2026",
       "time": "7:30 PM - 10:00 PM",
-      "seats_left": 71,
-      "seats_sold": 59
+      "seats_left": 70,
+      "seats_sold": 60
     },
     {
       "id": 1974,
       "date": "25 Oct, 2026",
       "time": "4:00 PM - 6:30 PM",
-      "seats_left": 50,
-      "seats_sold": 80
+      "seats_left": 47,
+      "seats_sold": 83
     }
   ]
 }
