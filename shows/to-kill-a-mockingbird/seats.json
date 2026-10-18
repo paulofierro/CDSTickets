@@ -69,15 +69,15 @@
       "id": 1970,
       "date": "18 Oct, 2026",
       "time": "4:00 PM - 6:30 PM",
-      "seats_left": 75,
-      "seats_sold": 55
+      "seats_left": 73,
+      "seats_sold": 57
     },
     {
       "id": 1971,
       "date": "22 Oct, 2026",
       "time": "7:30 PM - 10:00 PM",
-      "seats_left": 78,
-      "seats_sold": 52
+      "seats_left": 74,
+      "seats_sold": 56
     },
     {
       "id": 1972,
