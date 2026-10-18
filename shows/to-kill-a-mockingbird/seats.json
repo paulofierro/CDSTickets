@@ -91,15 +91,15 @@
       "id": 1973,
       "date": "24 Oct, 2026",
       "time": "7:30 PM - 10:00 PM",
-      "seats_left": 58,
-      "seats_sold": 72
+      "seats_left": 55,
+      "seats_sold": 75
     },
     {
       "id": 1974,
       "date": "25 Oct, 2026",
       "time": "4:00 PM - 6:30 PM",
-      "seats_left": 37,
-      "seats_sold": 93
+      "seats_left": 36,
+      "seats_sold": 94
     }
   ]
 }
