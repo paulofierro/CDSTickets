@@ -78,21 +78,22 @@
       "date": "22 Oct, 2026",
       "time": "7:30 PM - 10:00 PM",
       "seats_left": 24,
-      "seats_sold": 106
+      "seats_sold": 106,
+      "closed": true
     },
     {
       "id": 1972,
       "date": "23 Oct, 2026",
       "time": "7:30 PM - 10:00 PM",
-      "seats_left": 21,
-      "seats_sold": 109
+      "seats_left": 16,
+      "seats_sold": 114
     },
     {
       "id": 1973,
       "date": "24 Oct, 2026",
       "time": "7:30 PM - 10:00 PM",
-      "seats_left": 5,
-      "seats_sold": 125
+      "seats_left": 1,
+      "seats_sold": 129
     },
     {
       "id": 1974,
