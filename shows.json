@@ -1,6 +1,32 @@
 {
   "shows": [
     {
+      "slug": "elf-the-musical",
+      "title": "Elf - The Musical",
+      "event_id": 468,
+      "url": "https://ticket.cds.ky/elf-the-musical",
+      "image": "shows/elf-the-musical/poster.jpg",
+      "status": "on_sale",
+      "start": null,
+      "end": null,
+      "performances": 0,
+      "seats_left": 0,
+      "seats_sold": 0
+    },
+    {
+      "slug": "pay-what-you-can-elf-the-musical",
+      "title": "Pay What You Can: Elf - The Musical",
+      "event_id": 467,
+      "url": "https://ticket.cds.ky/pay-what-you-can-elf-the-musical",
+      "image": "shows/pay-what-you-can-elf-the-musical/poster.jpg",
+      "status": "on_sale",
+      "start": null,
+      "end": null,
+      "performances": 0,
+      "seats_left": 0,
+      "seats_sold": 0
+    },
+    {
       "slug": "to-kill-a-mockingbird",
       "title": "To Kill A Mockingbird",
       "event_id": 464,
