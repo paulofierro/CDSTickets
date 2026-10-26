@@ -4,7 +4,9 @@
 Every show lives in shows/<slug>/ with a seats.json written by fetch_seats.py
 and a history.json of sold-count snapshots. Shows whose event status is
 "closed" are no longer scraped, so their seats.json never changes; appending
-to them would only repeat the final numbers, so they are skipped.
+to them would only repeat the final numbers, so they are skipped. Shows whose
+status is "upcoming" have no performances on sale yet, so there is nothing to
+snapshot and they are skipped too.
 """
 import json
 import os
@@ -33,8 +35,9 @@ def append(slug):
     with open(seats_file) as f:
         seats = json.load(f)
 
-    if seats.get("event", {}).get("status") == "closed":
-        print(f"{slug}: closed, skipping", file=sys.stderr)
+    status = seats.get("event", {}).get("status")
+    if status in ("closed", "upcoming"):
+        print(f"{slug}: {status}, skipping", file=sys.stderr)
         return
 
     if os.path.exists(history_file):

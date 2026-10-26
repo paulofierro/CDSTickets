@@ -484,7 +484,15 @@ def scrape_event(opener, event, existing):
 
     shows.sort(key=show_sort_key)
 
-    sold_out = bool(shows) and all(s["seats_left"] == 0 for s in shows)
+    # A listing can go up before ticket sales open; its booking page then has
+    # no dates at all. Mark it upcoming so the index leaves it out until the
+    # first performance appears, at which point it flips to on_sale.
+    if not shows:
+        status = "upcoming"
+    elif all(s["seats_left"] == 0 for s in shows):
+        status = "sold_out"
+    else:
+        status = "on_sale"
     return {
         "event": {
             "id": event_id,
@@ -493,7 +501,7 @@ def scrape_event(opener, event, existing):
             "url": event["url"],
             "image": poster_name(event["slug"]),
             "image_url": event.get("image"),
-            "status": "sold_out" if sold_out else "on_sale",
+            "status": status,
         },
         "shows": shows,
     }
@@ -532,6 +540,10 @@ def build_index():
         if not data or "shows" not in data:
             continue
         event = data.get("event", {})
+        # Sales haven't opened: nothing to chart, so keep it off the dashboard.
+        if event.get("status") == "upcoming":
+            print(f"{slug}: upcoming, left out of {INDEX_FILE}", file=sys.stderr)
+            continue
         shows = sorted(data["shows"], key=show_sort_key)
         left = sum(s.get("seats_left") or 0 for s in shows)
         sold = sum(s.get("seats_sold") or 0 for s in shows)
@@ -592,6 +604,9 @@ def main():
         if not data or data.get("event", {}).get("status") == "closed":
             continue
         dates = [s.get("date", "") for s in data.get("shows", [])]
+        if not dates:
+            print(f"{slug}: not listed right now and never went on sale; leaving as upcoming", file=sys.stderr)
+            continue
         last = max(dates, key=lambda d: show_sort_key({"date": d}), default="")
         if listing_empty and not is_past(last):
             print(f"{slug}: not listed right now but still running (last date {last}); leaving as is", file=sys.stderr)
