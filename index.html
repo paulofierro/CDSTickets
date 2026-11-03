@@ -849,6 +849,9 @@
   const v24h = velocity(24 * 60 * 60 * 1000);
 
   const dates = data.shows.map(s => parseShowDate(s.date)).filter(Boolean);
+  // The whole run has happened: nothing is selling any more, so the stats
+  // and layout drop the "what's happening right now" framing.
+  const runOver = dates.length > 0 && dates.every(d => d < startOfToday);
   const range = dates.length
     ? `${fmtShort(dates[0])} – ${fmtShort(dates[dates.length - 1])}, ${dates[0].getFullYear()}`
     : '';
@@ -860,15 +863,17 @@
 
   const fmtDelta = n => n === null ? '—' : (n > 0 ? '+' : '') + fmtNum(n);
 
-  const firstSnapTs = history.snapshots
-    ?.map(s => Date.parse(s.t))
+  const snapTs = (history.snapshots || [])
+    .map(s => Date.parse(s.t))
     .filter(n => !Number.isNaN(n))
-    .sort((a, b) => a - b)[0];
-  if (firstSnapTs) {
-    const firstLabel = new Date(firstSnapTs).toLocaleDateString('en-US', {
+    .sort((a, b) => a - b);
+  if (snapTs.length) {
+    const fmtSnap = ts => new Date(ts).toLocaleDateString('en-US', {
       month: 'short', day: 'numeric', timeZone: 'America/Cayman',
     });
-    document.getElementById('stats-label').textContent = `Sales Stats (${firstLabel} – today)`;
+    // A finished run's stats stop at its last snapshot, not "today".
+    const endLabel = runOver ? fmtSnap(snapTs[snapTs.length - 1]) : 'today';
+    document.getElementById('stats-label').textContent = `Sales Stats (${fmtSnap(snapTs[0])} – ${endLabel})`;
   }
 
   document.getElementById('stats').innerHTML = `
@@ -884,10 +889,11 @@
       <div class="stat-value">${pctSold}%</div>
       <div class="stat-label">Capacity sold</div>
     </div>
+    ${runOver ? '' : `
     <div class="stat">
       <div class="stat-value">${v24h ? fmtDelta(v24h.delta) : '—'}</div>
       <div class="stat-label">Sold in last 24h</div>
-    </div>
+    </div>`}
   `;
 
   function classify(pct) {
@@ -1184,8 +1190,6 @@
   // While a run is in progress, weeks that have fully passed start collapsed
   // so the current week is front and centre. Once the whole run is over
   // there is no current week to focus on, so every week stays open.
-  const runOver = [...groups.values()].flat().every(({ date }) => date && date < startOfToday);
-
   weeksEl.innerHTML = weeksSorted.map(([_, items], i) => {
     const ds = items.map(x => x.date).filter(Boolean);
     const range = ds.length ? `${fmtShort(ds[0])} – ${fmtShort(ds[ds.length - 1])}` : '';
