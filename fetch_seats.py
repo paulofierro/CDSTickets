@@ -34,8 +34,11 @@ POSTER_EXTS = ("jpg", "jpeg", "png", "webp", "gif")
 # overriding any matching date, keyed by the main event's id. Used when a
 # single performance gets moved to a separate listing (e.g. the June 11
 # Pay-as-you-Can night for In The Heights, event 442, sold via event 451).
+# Elf (event 468) sells its Pay What You Can night through event 467.
+# An override event listed here is never tracked as a show of its own.
 OVERRIDE_EVENT_IDS = {
     442: [451],
+    468: [467],
 }
 
 # Phantom seats added on top of the scraped numbers, keyed by main event id and
@@ -583,8 +586,15 @@ def main():
         if eid is not None:
             existing_by_id[int(eid)] = slug
 
+    # Listings that only exist to sell part of another show are folded into
+    # that show by scrape_event; skip them here so they don't get a folder.
+    override_ids = {oid for ids in OVERRIDE_EVENT_IDS.values() for oid in ids}
+
     scraped_slugs = set()
     for event in events:
+        if event["id"] in override_ids:
+            print(f"Skipping {event['title']} (id={event['id']}): merged into its main event", file=sys.stderr)
+            continue
         event["slug"] = existing_by_id.get(event["id"], event["slug"])
         existing = load_json(seats_path(event["slug"]))
         download_poster(opener, event["slug"], event.get("image"))
