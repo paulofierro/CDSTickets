@@ -155,9 +155,19 @@ def show_sort_key(show):
     return (int(m.group(3)), MONTHS.get(m.group(2), 99), int(m.group(1)))
 
 
+# Optional Cookie header, e.g. "ci_session=abc123", for when the ticket
+# site gates the booking page behind a login. Copy it from a logged-in
+# browser session and export it as CDS_COOKIE before running.
+EXTRA_COOKIE = os.environ.get("CDS_COOKIE", "").strip()
+
+
 def build_opener():
     cj = CookieJar()
-    return urllib.request.build_opener(urllib.request.HTTPCookieProcessor(cj))
+    opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(cj))
+    if EXTRA_COOKIE:
+        opener.addheaders = [("Cookie", EXTRA_COOKIE)]
+        print("Using CDS_COOKIE for requests", file=sys.stderr)
+    return opener
 
 
 def _open_with_retry(opener, req):
