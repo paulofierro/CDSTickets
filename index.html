@@ -1181,14 +1181,20 @@
   }
   const weeksSorted = [...groups.entries()].sort((a, b) => a[0].localeCompare(b[0]));
 
+  // While a run is in progress, weeks that have fully passed start collapsed
+  // so the current week is front and centre. Once the whole run is over
+  // there is no current week to focus on, so every week stays open.
+  const runOver = [...groups.values()].flat().every(({ date }) => date && date < startOfToday);
+
   weeksEl.innerHTML = weeksSorted.map(([_, items], i) => {
     const ds = items.map(x => x.date).filter(Boolean);
     const range = ds.length ? `${fmtShort(ds[0])} – ${fmtShort(ds[ds.length - 1])}` : '';
     const cards = items.map(({ show, date }) => renderCard(show, date)).join('');
     const allPast = items.every(({ date }) => date && date < startOfToday);
+    const collapsed = allPast && !runOver;
     return `
-      <section class="week${allPast ? ' collapsed' : ''}">
-        <h2 class="week-label" role="button" tabindex="0" aria-expanded="${allPast ? 'false' : 'true'}">Week ${i + 1} · ${range}</h2>
+      <section class="week${collapsed ? ' collapsed' : ''}">
+        <h2 class="week-label" role="button" tabindex="0" aria-expanded="${collapsed ? 'false' : 'true'}">Week ${i + 1} · ${range}</h2>
         <div class="week-grid-wrapper">
           <div class="week-grid-inner">
             <div class="week-grid">${cards}</div>
