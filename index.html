@@ -1301,7 +1301,9 @@
   });
   document.addEventListener('scroll', hideTooltip, true);
 
-  const updated = lastModified ? describeUpdated(lastModified) : null;
+  // A finished run is no longer being scraped, so "last updated" would only
+  // count up forever; leave it off.
+  const updated = lastModified && !runOver ? describeUpdated(lastModified) : null;
   if (updated) {
     $('ts').textContent = `Last updated: ${updated.relative}`;
     $('ts').title = `${updated.absolute}`;
