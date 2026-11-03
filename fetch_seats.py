@@ -148,11 +148,33 @@ def download_poster(opener, slug, url):
 
 
 def show_sort_key(show):
-    """Chronological sort key from a "28 May, 2026" date label."""
+    """Chronological sort key from a "28 May, 2026" date label.
+
+    Ties (a matinee and an evening show on the same day) break on the
+    start time so the pair always lists matinee first.
+    """
     m = re.match(r"(\d+)\s+(\w+),?\s+(\d+)", show.get("date", ""))
     if not m:
-        return (9999, 99, 99)
-    return (int(m.group(3)), MONTHS.get(m.group(2), 99), int(m.group(1)))
+        return (9999, 99, 99, 0)
+    return (int(m.group(3)), MONTHS.get(m.group(2), 99), int(m.group(1)), time_sort_key(show.get("time")))
+
+
+def time_sort_key(time_label):
+    """Minutes since midnight from a "3:00 PM - 5:30 PM" label; 0 if absent."""
+    m = re.match(r"(\d+):(\d+)\s*(AM|PM)", time_label or "", re.IGNORECASE)
+    if not m:
+        return 0
+    hour = int(m.group(1)) % 12 + (12 if m.group(3).upper() == "PM" else 0)
+    return hour * 60 + int(m.group(2))
+
+
+def slot_key(show):
+    """Identify a performance by (date, time).
+
+    A run can have a matinee and an evening show on the same day, so the date
+    alone is ambiguous whenever rows from different scrapes are matched up.
+    """
+    return (show.get("date"), show.get("time"))
 
 
 # Optional Cookie header, e.g. "ci_session=abc123", for when the ticket
@@ -381,7 +403,7 @@ def scrape_event(opener, event, existing):
         print(f"Override event: id={override_id}", file=sys.stderr)
         for override_show in fetch_event_shows(opener, override_id):
             idx = next(
-                (i for i, s in enumerate(shows) if s["date"] == override_show["date"]),
+                (i for i, s in enumerate(shows) if slot_key(s) == slot_key(override_show)),
                 None,
             )
             if idx is not None:
@@ -393,9 +415,9 @@ def scrape_event(opener, event, existing):
             else:
                 shows.append(override_show)
 
-    scraped_dates = {s["date"] for s in shows}
+    scraped_slots = {slot_key(s) for s in shows}
     for manual in MANUAL_SHOWS.get(event_id, []):
-        if manual["date"] in scraped_dates:
+        if slot_key(manual) in scraped_slots:
             continue
         print(f"Manual show {manual['date']} (id={manual['id']}): not on booking page, adding as closed", file=sys.stderr)
         shows.append({**manual, "closed": True})
@@ -415,7 +437,7 @@ def scrape_event(opener, event, existing):
         if ps is not None:
             prev_known_sold.append(ps)
         if pl is not None and ps is not None and pl > 0:
-            prev_cap[str(old.get("id"))] = prev_cap[old.get("date")] = pl + ps
+            prev_cap[str(old.get("id"))] = prev_cap[slot_key(old)] = pl + ps
 
     healthy_caps = [
         s["seats_left"] + s["seats_sold"]
@@ -437,7 +459,7 @@ def scrape_event(opener, event, existing):
     carried_forward = set()
     for show in shows:
         if show["seats_left"] == 0 and show["seats_sold"] is None:
-            cap = prev_cap.get(str(show["id"])) or prev_cap.get(show["date"]) or house_cap
+            cap = prev_cap.get(str(show["id"])) or prev_cap.get(slot_key(show)) or house_cap
             if cap is not None:
                 show["seats_sold"] = cap
                 carried_forward.add(show["id"])
@@ -464,9 +486,9 @@ def scrape_event(opener, event, existing):
     # dropdown and stops being scraped. Keep the last-known data for any date
     # we previously had so closed/past shows stay on the dashboard.
     if existing:
-        scraped_dates = {s["date"] for s in shows}
+        scraped_slots = {slot_key(s) for s in shows}
         for old in existing.get("shows", []):
-            if old.get("date") not in scraped_dates:
+            if slot_key(old) not in scraped_slots:
                 print(
                     f"Retaining {old['date']} (id={old.get('id')}) from previous "
                     f"data — no longer in booking list",
@@ -479,14 +501,14 @@ def scrape_event(opener, event, existing):
     # through a separate listing (event 451, with its own date id) and reverts
     # to its main-event id once that listing closes. history.json records sold
     # counts per id, so a switch would split the show's sales curve in two.
-    # Carry each date's prior ids forward as `aka` so the dashboard can stitch
+    # Carry each performance's prior ids forward as `aka` so the dashboard can stitch
     # the full history back into one chart.
-    prev_by_date = {}
+    prev_by_slot = {}
     for old in (existing or {}).get("shows", []):
-        prev_by_date.setdefault(old.get("date"), old)
+        prev_by_slot.setdefault(slot_key(old), old)
     for show in shows:
         aka = {int(a) for a in show.get("aka", [])}
-        old = prev_by_date.get(show["date"])
+        old = prev_by_slot.get(slot_key(show))
         if old:
             aka.update(int(a) for a in old.get("aka", []))
             if old.get("id") is not None and int(old["id"]) != int(show["id"]):
