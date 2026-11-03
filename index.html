@@ -401,14 +401,6 @@
     font-variant-numeric: tabular-nums;
   }
 
-  /* Cast group label, from shows/<slug>/cast.json; one colour per group. */
-  .cast { font-weight: 600; }
-  .cast-1 { color: #dc2626; }
-  .cast-2 { color: #2563eb; }
-  @media (prefers-color-scheme: dark) {
-    .cast-1 { color: #f87171; }
-    .cast-2 { color: #60a5fa; }
-  }
 
   .badge {
     display: inline-block;
@@ -424,6 +416,22 @@
   .badge.warn { background: var(--warn-soft); color: var(--warn-text); }
   .badge.bad  { background: var(--bad-soft);  color: var(--bad-text); }
   .badge.done { background: color-mix(in srgb, var(--surface), var(--muted) 24%); color: var(--muted); }
+
+  /* Status badge on top, cast capsule beneath it, both flush right. */
+  .badges {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.3rem;
+  }
+  /* Cast group capsule, from shows/<slug>/cast.json: soft tint of the
+     group's colour behind darker text, matching the status badges. */
+  .badge.cast-1 { background: #fee2e2; color: #991b1b; }
+  .badge.cast-2 { background: #dbeafe; color: #1e40af; }
+  @media (prefers-color-scheme: dark) {
+    .badge.cast-1 { background: #2a0a0a; color: #fca5a5; }
+    .badge.cast-2 { background: #0c1a3a; color: #93c5fd; }
+  }
 
   .error {
     background: var(--bad-soft);
@@ -923,7 +931,7 @@
     const group = cast.performances[key];
     if (group == null) return '';
     const name = cast.groups?.[group] ?? `Group ${group}`;
-    return `<span class="cast cast-${escapeHtml(String(group))}">${escapeHtml(name)}</span>`;
+    return `<span class="badge cast-${escapeHtml(String(group))}">${escapeHtml(name)}</span>`;
   }
 
   function renderCard(show, date) {
@@ -957,7 +965,10 @@
                 <div class="show-day">${day}</div>
                 <div class="show-date">${dateLabel}</div>
               </div>
-              <span class="badge ${badgeCls}"${badgeTitle}>${badgeLabel}</span>
+              <div class="badges">
+                <span class="badge ${badgeCls}"${badgeTitle}>${badgeLabel}</span>
+                ${castLabel(show)}
+              </div>
             </div>
             <div class="show-time">${show.time || ''}</div>
             <div class="availability">
@@ -967,7 +978,6 @@
             <div class="bar"><div class="bar-fill ${isPast ? 'done' : cls}" style="width:${pct}%"></div></div>
             <div class="meta">
               <span>${fmtNum(sold)} sold</span>
-              ${castLabel(show)}
               <span>${pct}% full</span>
             </div>
           </div>
