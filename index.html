@@ -819,8 +819,8 @@
 
   // Velocity: sold in the last N ms, computed against history.json snapshots.
   // Compare only show IDs present in both snapshots so newly-added shows
-  // don't inflate the delta. If no snapshot is old enough, fall back to the
-  // oldest one so we can still show *some* number until enough history exists.
+  // don't inflate the delta. Until a snapshot at least N old exists there is
+  // no honest baseline, so the stat reads "—" rather than a misleading +0.
   // Only shows with a known sold count participate in velocity; a sold-out
   // show whose count is briefly missing must not read as a drop to 0.
   const currentSold = Object.fromEntries(
@@ -837,7 +837,7 @@
       const ts = Date.parse(snap.t);
       if (Number.isNaN(ts)) continue;
       if (ts <= cutoff) baseline = snap;
-      else { if (!baseline) baseline = snap; break; }
+      else break;
     }
     if (!baseline) return null;
     let delta = 0;
