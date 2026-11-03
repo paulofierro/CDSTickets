@@ -7,6 +7,7 @@ Displays the ticket availability of current productions by [the Cayman Drama Soc
 - `shows.json` — index of tracked shows, derived from the per-show folders by the scraper.
 - `shows/<slug>/seats.json` — latest per-performance seat counts for one show.
 - `shows/<slug>/history.json` — snapshots of sold counts over time for that show.
+- `shows/<slug>/cast.json` — optional. For a show with more than one cast, maps each performance (`"27 Nov, 2026 7:30 PM"`) to a group number; the dashboard labels the card with that group's name.
 - `shows/<slug>/poster.jpg` — the show's artwork, downloaded once from the ticket listing. Drop in your own `poster.jpg` (or `.png`/`.webp`) to override; an existing file is never overwritten.
 - `fetch_seats.py` — scrapes every event on the CDS ticket listing, writes each show's `seats.json`, marks shows that have left the listing as closed, and rebuilds `shows.json`. A listed show whose booking page has no dates yet is marked `upcoming` and left out of `shows.json` until sales open.
 - `append_history.py` — appends a snapshot to every open show's `history.json`.

@@ -401,6 +401,15 @@
     font-variant-numeric: tabular-nums;
   }
 
+  /* Cast group label, from shows/<slug>/cast.json; one colour per group. */
+  .cast { font-weight: 600; }
+  .cast-1 { color: #dc2626; }
+  .cast-2 { color: #2563eb; }
+  @media (prefers-color-scheme: dark) {
+    .cast-1 { color: #f87171; }
+    .cast-2 { color: #60a5fa; }
+  }
+
   .badge {
     display: inline-block;
     padding: 0.22rem 0.6rem;
@@ -778,7 +787,7 @@
 
   // Detail view: load this show's data and reveal the dashboard chrome.
   const base = `shows/${slug}/`;
-  let data, lastModified, history = { snapshots: [] };
+  let data, lastModified, history = { snapshots: [] }, cast = null;
   try {
     const resp = await fetch(base + 'seats.json', { cache: 'no-store' });
     if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
@@ -788,6 +797,12 @@
       const hresp = await fetch(base + 'history.json', { cache: 'no-store' });
       if (hresp.ok) history = await hresp.json();
     } catch (_) { /* history is optional */ }
+    try {
+      // Optional: which cast group performs each date, for shows with more
+      // than one cast. Keyed by "<date> <start time>" as seats.json spells them.
+      const cresp = await fetch(base + 'cast.json', { cache: 'no-store' });
+      if (cresp.ok) cast = await cresp.json();
+    } catch (_) { /* cast is optional */ }
   } catch (e) {
     showError(entry.title, `${base}seats.json`, e);
     weeksEl.insertAdjacentHTML('beforeend', '<p><a class="back-link" href="./">← All shows</a></p>');
@@ -902,6 +917,15 @@
     return { cls: 'good', label: 'Available' };
   }
 
+  function castLabel(show) {
+    if (!cast?.performances) return '';
+    const key = `${show.date} ${(show.time || '').split(' - ')[0]}`.trim();
+    const group = cast.performances[key];
+    if (group == null) return '';
+    const name = cast.groups?.[group] ?? `Group ${group}`;
+    return `<span class="cast cast-${escapeHtml(String(group))}">${escapeHtml(name)}</span>`;
+  }
+
   function renderCard(show, date) {
     const day = date ? dayNames[date.getDay()] : '';
     const dateLabel = date ? fmtShort(date) : show.date;
@@ -943,6 +967,7 @@
             <div class="bar"><div class="bar-fill ${isPast ? 'done' : cls}" style="width:${pct}%"></div></div>
             <div class="meta">
               <span>${fmtNum(sold)} sold</span>
+              ${castLabel(show)}
               <span>${pct}% full</span>
             </div>
           </div>
