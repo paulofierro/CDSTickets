@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-11-04T13:00:25Z",
+  "updated_at": "2026-11-04T14:55:14Z",
   "event": {
     "id": 468,
     "title": "Elf - The Musical",
@@ -14,29 +14,29 @@
       "id": 2034,
       "date": "26 Nov, 2026",
       "time": "7:30 PM - 10:00 PM",
-      "seats_left": 83,
-      "seats_sold": 47
+      "seats_left": 81,
+      "seats_sold": 49
     },
     {
       "id": 2020,
       "date": "27 Nov, 2026",
       "time": "7:30 PM - 10:00 PM",
-      "seats_left": 58,
-      "seats_sold": 72
+      "seats_left": 51,
+      "seats_sold": 79
     },
     {
       "id": 2021,
       "date": "28 Nov, 2026",
       "time": "3:00 PM - 5:30 PM",
-      "seats_left": 8,
-      "seats_sold": 122
+      "seats_left": 0,
+      "seats_sold": 130
     },
     {
       "id": 2022,
       "date": "28 Nov, 2026",
       "time": "7:30 PM - 10:00 PM",
-      "seats_left": 86,
-      "seats_sold": 44
+      "seats_left": 64,
+      "seats_sold": 66
     },
     {
       "id": 2023,
@@ -49,15 +49,15 @@
       "id": 2024,
       "date": "03 Dec, 2026",
       "time": "7:30 PM - 10:00 PM",
-      "seats_left": 110,
-      "seats_sold": 20
+      "seats_left": 106,
+      "seats_sold": 24
     },
     {
       "id": 2025,
       "date": "04 Dec, 2026",
       "time": "7:30 PM - 10:00 PM",
-      "seats_left": 56,
-      "seats_sold": 74
+      "seats_left": 42,
+      "seats_sold": 88
     },
     {
       "id": 2026,
@@ -70,8 +70,8 @@
       "id": 2027,
       "date": "05 Dec, 2026",
       "time": "7:30 PM - 10:00 PM",
-      "seats_left": 19,
-      "seats_sold": 111
+      "seats_left": 1,
+      "seats_sold": 129
     },
     {
       "id": 2028,
@@ -84,29 +84,29 @@
       "id": 2029,
       "date": "10 Dec, 2026",
       "time": "7:30 PM - 10:00 PM",
-      "seats_left": 95,
-      "seats_sold": 35
+      "seats_left": 86,
+      "seats_sold": 44
     },
     {
       "id": 2030,
       "date": "11 Dec, 2026",
       "time": "7:30 PM - 10:00 PM",
-      "seats_left": 79,
-      "seats_sold": 51
+      "seats_left": 64,
+      "seats_sold": 66
     },
     {
       "id": 2031,
       "date": "12 Dec, 2026",
       "time": "3:00 PM - 5:30 PM",
-      "seats_left": 13,
-      "seats_sold": 117
+      "seats_left": 0,
+      "seats_sold": 130
     },
     {
       "id": 2032,
       "date": "12 Dec, 2026",
       "time": "7:30 PM - 10:00 PM",
-      "seats_left": 49,
-      "seats_sold": 81
+      "seats_left": 21,
+      "seats_sold": 109
     },
     {
       "id": 2033,
