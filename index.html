@@ -304,6 +304,10 @@
     border-color: var(--border-strong);
     box-shadow: 0 4px 12px rgba(0,0,0,0.04);
   }
+  .show.sold-out .card-front,
+  .show.sold-out .card-back {
+    background: color-mix(in srgb, var(--surface), var(--bad) 5%);
+  }
   .show.past .card-front,
   .show.past .card-back {
     background: color-mix(in srgb, var(--surface), var(--muted) 12%);
@@ -734,7 +738,7 @@
 
   function renderList() {
     const shows = index.shows || [];
-    $('title').textContent = '🎭 Ticket Sales Tracker';
+    $('title').textContent = '🎭 Ticket Sales Tracker 🎟️';
     $('subtitle').textContent = 'A prototype for the inquisitive. Sales numbers get updated every 4 hours.';
     const updated = indexModified ? describeUpdated(indexModified) : null;
     const next = describeNextUpdate();
@@ -959,7 +963,7 @@
     }
 
     return `
-      <article class="show${isPast ? ' past' : ''}" data-show-id="${show.id}" data-aka="${(show.aka || []).join(',')}" tabindex="0" role="button" aria-pressed="false" aria-label="${day} ${dateLabel} — show daily sales">
+      <article class="show${isPast ? ' past' : ''}${pct === 100 ? ' sold-out' : ''}" data-show-id="${show.id}" data-aka="${(show.aka || []).join(',')}" tabindex="0" role="button" aria-pressed="false" aria-label="${day} ${dateLabel} — show daily sales">
         <div class="card-inner">
           <div class="card-front">
             <div class="show-header">
