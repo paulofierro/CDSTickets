@@ -733,7 +733,7 @@
   function renderList() {
     const shows = index.shows || [];
     $('title').textContent = '🎭 Ticket Sales Tracker';
-    $('subtitle').textContent = 'A prototype for the inquisitive.';
+    $('subtitle').textContent = 'A prototype for the inquisitive. Sales numbers get updated every 4 hours.';
     const updated = indexModified ? describeUpdated(indexModified) : null;
     const next = describeNextUpdate();
     $('ts').textContent = [
