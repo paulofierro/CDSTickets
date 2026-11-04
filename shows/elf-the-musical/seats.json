@@ -14,105 +14,120 @@
       "date": "26 Nov, 2026",
       "time": "7:30 PM - 10:00 PM",
       "seats_left": 95,
-      "seats_sold": 35
+      "seats_sold": 35,
+      "closed": true
     },
     {
       "id": 2020,
       "date": "27 Nov, 2026",
       "time": "7:30 PM - 10:00 PM",
       "seats_left": 91,
-      "seats_sold": 39
+      "seats_sold": 39,
+      "closed": true
     },
     {
       "id": 2021,
       "date": "28 Nov, 2026",
       "time": "3:00 PM - 5:30 PM",
       "seats_left": 88,
-      "seats_sold": 42
+      "seats_sold": 42,
+      "closed": true
     },
     {
       "id": 2022,
       "date": "28 Nov, 2026",
       "time": "7:30 PM - 10:00 PM",
       "seats_left": 119,
-      "seats_sold": 11
+      "seats_sold": 11,
+      "closed": true
     },
     {
       "id": 2023,
       "date": "29 Nov, 2026",
       "time": "3:00 PM - 5:30 PM",
       "seats_left": 46,
-      "seats_sold": 84
+      "seats_sold": 84,
+      "closed": true
     },
     {
       "id": 2024,
       "date": "03 Dec, 2026",
       "time": "7:30 PM - 10:00 PM",
       "seats_left": 119,
-      "seats_sold": 11
+      "seats_sold": 11,
+      "closed": true
     },
     {
       "id": 2025,
       "date": "04 Dec, 2026",
       "time": "7:30 PM - 10:00 PM",
       "seats_left": 79,
-      "seats_sold": 51
+      "seats_sold": 51,
+      "closed": true
     },
     {
       "id": 2026,
       "date": "05 Dec, 2026",
       "time": "3:00 PM - 5:30 PM",
       "seats_left": 67,
-      "seats_sold": 63
+      "seats_sold": 63,
+      "closed": true
     },
     {
       "id": 2027,
       "date": "05 Dec, 2026",
       "time": "7:30 PM - 10:00 PM",
       "seats_left": 41,
-      "seats_sold": 89
+      "seats_sold": 89,
+      "closed": true
     },
     {
       "id": 2028,
       "date": "06 Dec, 2026",
       "time": "3:00 PM - 5:30 PM",
       "seats_left": 0,
-      "seats_sold": 130
+      "seats_sold": 130,
+      "closed": true
     },
     {
       "id": 2029,
       "date": "10 Dec, 2026",
       "time": "7:30 PM - 10:00 PM",
       "seats_left": 118,
-      "seats_sold": 12
+      "seats_sold": 12,
+      "closed": true
     },
     {
       "id": 2030,
       "date": "11 Dec, 2026",
       "time": "7:30 PM - 10:00 PM",
       "seats_left": 103,
-      "seats_sold": 27
+      "seats_sold": 27,
+      "closed": true
     },
     {
       "id": 2031,
       "date": "12 Dec, 2026",
       "time": "3:00 PM - 5:30 PM",
       "seats_left": 85,
-      "seats_sold": 45
+      "seats_sold": 45,
+      "closed": true
     },
     {
       "id": 2032,
       "date": "12 Dec, 2026",
       "time": "7:30 PM - 10:00 PM",
       "seats_left": 83,
-      "seats_sold": 47
+      "seats_sold": 47,
+      "closed": true
     },
     {
       "id": 2033,
       "date": "13 Dec, 2026",
       "time": "3:00 PM - 5:30 PM",
       "seats_left": 0,
-      "seats_sold": 130
+      "seats_sold": 130,
+      "closed": true
     }
   ]
 }
