@@ -549,6 +549,18 @@ def write_json(path, payload):
     print(f"Wrote {path}", file=sys.stderr)
 
 
+def write_seats(path, payload):
+    """Write a seats.json stamped with the time it was checked.
+
+    updated_at is what the dashboard shows as "last updated": the last time
+    the scraper checked this show, whether or not the numbers moved. It is
+    restamped on every write, so every scheduled run produces a commit.
+    """
+    payload = {k: v for k, v in payload.items() if k != "updated_at"}
+    stamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    write_json(path, {"updated_at": stamp, **payload})
+
+
 def all_show_slugs():
     if not os.path.isdir(SHOWS_DIR):
         return []
@@ -594,10 +606,13 @@ def build_index():
             "performances": len(shows),
             "seats_left": left,
             "seats_sold": sold,
+            "updated_at": data.get("updated_at"),
         })
     # Newest run first so the dashboard leads with the current show.
     entries.sort(key=lambda e: show_sort_key({"date": e["start"] or ""}), reverse=True)
-    write_json(INDEX_FILE, {"shows": entries})
+    # The landing page's "last updated" is the most recent change to any show.
+    stamps = [e["updated_at"] for e in entries if e["updated_at"]]
+    write_json(INDEX_FILE, {"updated_at": max(stamps, default=None), "shows": entries})
 
 
 def main():
@@ -631,7 +646,7 @@ def main():
         existing = load_json(seats_path(event["slug"]))
         download_poster(opener, event["slug"], event.get("image"))
         payload = scrape_event(opener, event, existing)
-        write_json(seats_path(event["slug"]), payload)
+        write_seats(seats_path(event["slug"]), payload)
         scraped_slugs.add(event["slug"])
 
     # Anything we have on disk but the listing no longer offers has finished
@@ -655,7 +670,7 @@ def main():
             continue
         data.setdefault("event", {})["status"] = "closed"
         print(f"Marking {slug} closed (no longer listed)", file=sys.stderr)
-        write_json(path, data)
+        write_seats(path, data)
 
     build_index()
 

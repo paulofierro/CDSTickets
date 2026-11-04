@@ -648,7 +648,9 @@
     const iresp = await fetch('shows.json', { cache: 'no-store' });
     if (!iresp.ok) throw new Error(`HTTP ${iresp.status}`);
     index = await iresp.json();
-    indexModified = iresp.headers.get('Last-Modified');
+    // updated_at is stamped by fetch_seats.py when seat data actually changes;
+    // Last-Modified only reflects the latest deploy, so it is just a fallback.
+    indexModified = index.updated_at || iresp.headers.get('Last-Modified');
   } catch (e) {
     showError('Cannot load data', 'shows.json', e);
     return;
@@ -800,7 +802,7 @@
     const resp = await fetch(base + 'seats.json', { cache: 'no-store' });
     if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
     data = await resp.json();
-    lastModified = resp.headers.get('Last-Modified');
+    lastModified = data.updated_at || resp.headers.get('Last-Modified');
     try {
       const hresp = await fetch(base + 'history.json', { cache: 'no-store' });
       if (hresp.ok) history = await hresp.json();
