@@ -27,15 +27,15 @@
       "id": 2021,
       "date": "28 Nov, 2026",
       "time": "3:00 PM - 5:30 PM",
-      "seats_left": 17,
-      "seats_sold": 113
+      "seats_left": 8,
+      "seats_sold": 122
     },
     {
       "id": 2022,
       "date": "28 Nov, 2026",
       "time": "7:30 PM - 10:00 PM",
-      "seats_left": 95,
-      "seats_sold": 35
+      "seats_left": 86,
+      "seats_sold": 44
     },
     {
       "id": 2023,
@@ -55,8 +55,8 @@
       "id": 2025,
       "date": "04 Dec, 2026",
       "time": "7:30 PM - 10:00 PM",
-      "seats_left": 60,
-      "seats_sold": 70
+      "seats_left": 56,
+      "seats_sold": 74
     },
     {
       "id": 2026,
@@ -69,8 +69,8 @@
       "id": 2027,
       "date": "05 Dec, 2026",
       "time": "7:30 PM - 10:00 PM",
-      "seats_left": 26,
-      "seats_sold": 104
+      "seats_left": 19,
+      "seats_sold": 111
     },
     {
       "id": 2028,
@@ -83,8 +83,8 @@
       "id": 2029,
       "date": "10 Dec, 2026",
       "time": "7:30 PM - 10:00 PM",
-      "seats_left": 97,
-      "seats_sold": 33
+      "seats_left": 95,
+      "seats_sold": 35
     },
     {
       "id": 2030,
@@ -97,15 +97,15 @@
       "id": 2031,
       "date": "12 Dec, 2026",
       "time": "3:00 PM - 5:30 PM",
-      "seats_left": 25,
-      "seats_sold": 105
+      "seats_left": 13,
+      "seats_sold": 117
     },
     {
       "id": 2032,
       "date": "12 Dec, 2026",
       "time": "7:30 PM - 10:00 PM",
-      "seats_left": 50,
-      "seats_sold": 80
+      "seats_left": 49,
+      "seats_sold": 81
     },
     {
       "id": 2033,
