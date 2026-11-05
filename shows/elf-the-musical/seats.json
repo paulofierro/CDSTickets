@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-11-05T21:05:19Z",
+  "updated_at": "2026-11-05T23:04:25Z",
   "event": {
     "id": 468,
     "title": "Elf - The Musical",
@@ -35,8 +35,8 @@
       "id": 2022,
       "date": "28 Nov, 2026",
       "time": "7:30 PM - 10:00 PM",
-      "seats_left": 1,
-      "seats_sold": 129
+      "seats_left": 0,
+      "seats_sold": 130
     },
     {
       "id": 2023,
@@ -49,8 +49,8 @@
       "id": 2024,
       "date": "03 Dec, 2026",
       "time": "7:30 PM - 10:00 PM",
-      "seats_left": 38,
-      "seats_sold": 92
+      "seats_left": 25,
+      "seats_sold": 105
     },
     {
       "id": 2025,
@@ -84,8 +84,8 @@
       "id": 2029,
       "date": "10 Dec, 2026",
       "time": "7:30 PM - 10:00 PM",
-      "seats_left": 24,
-      "seats_sold": 106
+      "seats_left": 16,
+      "seats_sold": 114
     },
     {
       "id": 2030,
