@@ -657,6 +657,14 @@
 
   const fmtShort = d => d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
   const fmtNum = n => n.toLocaleString('en-US');
+  // "November 26 – 29" within a month, "November 30 – December 3" across two.
+  function fmtRange(a, b) {
+    const month = d => d.toLocaleDateString('en-US', { month: 'long' });
+    const start = `${month(a)} ${a.getDate()}`;
+    if (a.toDateString() === b.toDateString()) return start;
+    const sameMonth = a.getMonth() === b.getMonth() && a.getFullYear() === b.getFullYear();
+    return `${start} – ${sameMonth ? '' : month(b) + ' '}${b.getDate()}`;
+  }
   const escapeHtml = s => String(s ?? '').replace(/[&<>"']/g, c => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
   })[c]);
@@ -933,12 +941,20 @@
     .filter(n => !Number.isNaN(n))
     .sort((a, b) => a - b);
   if (snapTs.length) {
-    const fmtSnap = ts => new Date(ts).toLocaleDateString('en-US', {
-      month: 'short', day: 'numeric', timeZone: 'America/Cayman',
-    });
+    // Snapshot timestamps are read as Cayman calendar days so fmtRange's
+    // local-date maths lines up with the dates shown on the page.
+    const caymanDay = ts => {
+      const parts = Object.fromEntries(new Intl.DateTimeFormat('en-US', {
+        year: 'numeric', month: 'numeric', day: 'numeric', timeZone: 'America/Cayman',
+      }).formatToParts(ts).map(p => [p.type, p.value]));
+      return new Date(+parts.year, +parts.month - 1, +parts.day);
+    };
+    const first = caymanDay(snapTs[0]);
     // A finished run's stats stop at its last snapshot, not "today".
-    const endLabel = runOver ? fmtSnap(snapTs[snapTs.length - 1]) : 'today';
-    document.getElementById('stats-label').textContent = `Sales Stats (${fmtSnap(snapTs[0])} – ${endLabel})`;
+    const range = runOver
+      ? fmtRange(first, caymanDay(snapTs[snapTs.length - 1]))
+      : `${fmtRange(first, first)} – today`;
+    document.getElementById('stats-label').textContent = `Sales Stats (${range})`;
   }
 
   document.getElementById('stats').innerHTML = `
@@ -1326,7 +1342,7 @@
   // there is no current week to focus on, so every week stays open.
   weeksEl.innerHTML = weeksSorted.map(([_, items], i) => {
     const ds = items.map(x => x.date).filter(Boolean);
-    const range = ds.length ? `${fmtShort(ds[0])} – ${fmtShort(ds[ds.length - 1])}` : '';
+    const range = ds.length ? fmtRange(ds[0], ds[ds.length - 1]) : '';
     const cards = items.map(({ show, date }) => renderCard(show, date)).join('');
     const allPast = items.every(({ date }) => date && date < startOfToday);
     const collapsed = allPast && !runOver;
