@@ -961,8 +961,9 @@
     </div>`}
   `;
 
-  function classify(pct) {
+  function classify(pct, left) {
     if (pct == 100) return { cls: 'bad',   label: '🥳 Sold out!' };
+    if (left < 5)   return { cls: 'warn',  label: 'Nearly...' };
     if (pct >= 75)  return { cls: 'warn',  label: 'Filling up' };
     return { cls: 'good', label: 'Available' };
   }
@@ -1043,7 +1044,7 @@
     // so the card reads "Sold out!" instead of "0 sold / 0% full".
     const soldOut = show.seats_left === 0;
     const pct = soldOut ? 100 : (cap ? Math.round((sold / cap) * 100) : 0);
-    const { cls, label } = classify(pct);
+    const { cls, label } = classify(pct, left);
     const isPast = date && date < startOfToday;
     let badgeLabel = label, badgeCls = cls, badgeTitle = '';
     if (isPast) {
