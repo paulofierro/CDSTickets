@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-11-05T23:04:25Z",
+  "updated_at": "2026-11-06T00:36:36Z",
   "shows": [
     {
       "slug": "elf-the-musical",
@@ -11,9 +11,9 @@
       "start": "26 Nov, 2026",
       "end": "13 Dec, 2026",
       "performances": 15,
-      "seats_left": 91,
-      "seats_sold": 1859,
-      "updated_at": "2026-11-05T23:04:25Z"
+      "seats_left": 80,
+      "seats_sold": 1870,
+      "updated_at": "2026-11-06T00:36:36Z"
     },
     {
       "slug": "to-kill-a-mockingbird",
