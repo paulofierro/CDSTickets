@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-11-07T02:03:41Z",
+  "updated_at": "2026-11-07T02:58:43Z",
   "event": {
     "id": 468,
     "title": "Elf - The Musical",
@@ -7,15 +7,15 @@
     "url": "https://ticket.cds.ky/elf-the-musical",
     "image": "poster.jpg",
     "image_url": "https://ticket.cds.ky/cache/Event/600_400/1792947072Elf_Logo.jpg",
-    "status": "on_sale"
+    "status": "sold_out"
   },
   "shows": [
     {
       "id": 2034,
       "date": "26 Nov, 2026",
       "time": "7:30 PM - 10:00 PM",
-      "seats_left": 22,
-      "seats_sold": 108,
+      "seats_left": 0,
+      "seats_sold": 130,
       "closed": true
     },
     {
@@ -54,8 +54,8 @@
       "id": 2024,
       "date": "03 Dec, 2026",
       "time": "7:30 PM - 10:00 PM",
-      "seats_left": 1,
-      "seats_sold": 129,
+      "seats_left": 0,
+      "seats_sold": 130,
       "closed": true
     },
     {

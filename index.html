@@ -1066,7 +1066,7 @@
     if (isPast) {
       badgeLabel = '✅ Done';
       badgeCls = 'done';
-    } else if (show.closed) {
+    } else if (show.closed && !soldOut) {
       badgeLabel = '🔒 Closed';
       badgeTitle = ' title="Online ticket sales for this show are closed"';
     }

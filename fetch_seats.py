@@ -485,6 +485,14 @@ def scrape_event(opener, event, existing):
     # Once a performance's ticket sales close, it drops out of the booking
     # dropdown and stops being scraped. Keep the last-known data for any date
     # we previously had so closed/past shows stay on the dashboard.
+    #
+    # A date that drops out before its performance day has sold out: the
+    # booking page swaps the button for "Sold Out" and stops offering the date,
+    # even when the last scrape still showed a few seats left. On the first run
+    # it goes missing, its remaining seats are counted as sold so the card and
+    # history.json read as a full house from that run on. A date that drops out
+    # on or after its performance day just closed, so its leftover seats stay
+    # unsold.
     if existing:
         scraped_slots = {slot_key(s) for s in shows}
         for old in existing.get("shows", []):
@@ -494,6 +502,15 @@ def scrape_event(opener, event, existing):
                     f"data — no longer in booking list",
                     file=sys.stderr,
                 )
+                left = old.get("seats_left") or 0
+                if not old.get("closed") and left > 0 and not is_on_or_past(old["date"]):
+                    old["seats_sold"] = (old.get("seats_sold") or 0) + left
+                    old["seats_left"] = 0
+                    print(
+                        f"Sold out {old['date']} (id={old.get('id')}): dropped "
+                        f"before its performance day, counting {left} left as sold",
+                        file=sys.stderr,
+                    )
                 old["closed"] = True
                 shows.append(old)
 
@@ -577,6 +594,15 @@ def is_past(date_label):
         return False
     today = datetime.now(timezone(timedelta(hours=-5))).date()
     return key < (today.year, today.month, today.day)
+
+
+def is_on_or_past(date_label):
+    """True when a "25 Oct, 2026" label is today or earlier in Cayman time (UTC-5)."""
+    key = show_sort_key({"date": date_label})[:3]
+    if key == (9999, 99, 99):
+        return False
+    today = datetime.now(timezone(timedelta(hours=-5))).date()
+    return key <= (today.year, today.month, today.day)
 
 
 def build_index():

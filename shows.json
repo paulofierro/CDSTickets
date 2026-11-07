@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-11-07T02:03:41Z",
+  "updated_at": "2026-11-07T02:58:43Z",
   "shows": [
     {
       "slug": "elf-the-musical",
@@ -7,13 +7,13 @@
       "event_id": 468,
       "url": "https://ticket.cds.ky/elf-the-musical",
       "image": "shows/elf-the-musical/poster.jpg",
-      "status": "on_sale",
+      "status": "sold_out",
       "start": "26 Nov, 2026",
       "end": "13 Dec, 2026",
       "performances": 15,
-      "seats_left": 23,
-      "seats_sold": 1927,
-      "updated_at": "2026-11-07T02:03:41Z"
+      "seats_left": 0,
+      "seats_sold": 1950,
+      "updated_at": "2026-11-07T02:58:43Z"
     },
     {
       "slug": "to-kill-a-mockingbird",
