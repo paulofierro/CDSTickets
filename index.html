@@ -776,10 +776,13 @@
     $('title').textContent = '🎭 Ticket Sales Tracker 🎟️';
     $('subtitle').textContent = 'A prototype for the inquisitive. Sales numbers get updated every 4 hours.';
     const updated = indexModified ? describeUpdated(indexModified) : null;
-    const next = describeNextUpdate();
+    // Once every listed show is sold out or closed there is nothing left to
+    // refresh, so don't promise a next update.
+    const anyOnSale = shows.some(e => e.status === 'on_sale');
+    const next = anyOnSale ? describeNextUpdate() : null;
     $('ts').textContent = [
       updated ? `Last updated ${updated.relative}` : null,
-      `Next update ${next.when}`,
+      next ? `Next update ${next.when}` : null,
     ].filter(Boolean).join(' · ');
     $('ts').title = updated ? `${updated.absolute}` : '';
     $('ts').classList.add('spaced');
@@ -1455,10 +1458,11 @@
   // count up forever, and there is no next update to promise; leave both off.
   if (!runOver) {
     const updated = lastModified ? describeUpdated(lastModified) : null;
-    const next = describeNextUpdate();
+    // A sold-out run has no seats left to track, so skip the next-update promise.
+    const next = data.event.status === 'sold_out' ? null : describeNextUpdate();
     $('ts').textContent = [
       updated ? `Last updated ${updated.relative}` : null,
-      `Next update ${next.when}`,
+      next ? `Next update ${next.when}` : null,
     ].filter(Boolean).join(' · ');
     $('ts').title = updated ? `${updated.absolute}` : '';
   }
