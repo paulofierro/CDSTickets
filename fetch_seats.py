@@ -567,13 +567,18 @@ def write_json(path, payload):
 
 
 def write_seats(path, payload):
-    """Write a seats.json stamped with the time it was checked.
+    """Write a seats.json stamped with the time its data last changed.
 
     updated_at is what the dashboard shows as "last updated": the last time
-    the scraper checked this show, whether or not the numbers moved. It is
-    restamped on every write, so every scheduled run produces a commit.
+    the seat data actually moved. When the new payload matches what is on
+    disk, the file is left untouched so a no-op run produces no commit.
     """
     payload = {k: v for k, v in payload.items() if k != "updated_at"}
+    existing = load_json(path) or {}
+    previous = {k: v for k, v in existing.items() if k != "updated_at"}
+    if existing.get("updated_at") and previous == payload:
+        print(f"{path} unchanged; keeping updated_at {existing['updated_at']}", file=sys.stderr)
+        return
     stamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     write_json(path, {"updated_at": stamp, **payload})
 
